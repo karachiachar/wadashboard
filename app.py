@@ -31,7 +31,6 @@ def serve_sw():
     return app.send_static_file('sw.js')
 
 if __name__ == "__main__":
-=======
 # app.py
 from flask import Flask
 from database import engine_saas, engine_whatsapp, BaseSaaS, BaseWhatsApp
