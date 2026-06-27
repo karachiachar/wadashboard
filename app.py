@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # app.py
 from flask import Flask
 from database import engine_saas, engine_whatsapp, BaseSaaS, BaseWhatsApp
@@ -64,5 +64,5 @@ def serve_sw():
     return app.send_static_file('sw.js')
 
 if __name__ == "__main__":
->>>>>>> aed7e9e5d444501ed3d150681887b2334c720e52
+
     app.run(host="0.0.0.0", port=5000, debug=True)
