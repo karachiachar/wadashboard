@@ -1,0 +1,9 @@
+<<<<<<< HEAD
+Flask
+requests
+=======
+Flask
+requests
+>>>>>>> aed7e9e5d444501ed3d150681887b2334c720e52
+SQLAlchemy
+gunicorn

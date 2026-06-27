@@ -1,0 +1,145 @@
+<<<<<<< HEAD
+Created At: 2026-06-14T14:32:17Z
+Completed At: 2026-06-14T14:32:19Z
+
+				The command completed successfully.
+				Output:
+				warning: in the working copy of 'routes/dashboard.py', LF will be replaced by CRLF the next time Git touches it
+diff --git a/routes/dashboard.py b/routes/dashboard.py
+index 587f070..58a78c4 100644
+--- a/routes/dashboard.py
++++ b/routes/dashboard.py
+@@ -947,3 +947,59 @@ def fire_conversion_api():
+         return jsonify({"error": str(e)}), 500
+     finally:
+         db_saas.close()
++
++
++# ─────────────────────────────────────────────
++#  PRODUCTS API
++# ─────────────────────────────────────────────
++import os
++from werkzeug.utils import secure_filename
++import uuid as _uuid
++    finally:
++        db.close()
++
++@dashboard_bp.route('/api/orders/<int:oid>', methods=['DELETE'])
++def delete_order_api(oid):
++    err = _auth_check()
++    if err: return err
++    db = SessionWhatsApp()
++    try:
++        from models import Order, OrderItem
++        db.query(OrderItem).filter(OrderItem.order_id == oid).delete()
++        o = db.query(Order).get(oid)
++        if o: db.delete(o)
++        db.commit()
++        return jsonify({'status': 'success'})
++    except Exception as e:
++        db.rollback()
++        return jsonify({'error': str(e)}), 500
++    finally:
++        db.close()
++
++@dashboard_bp.route('/api/orders/packing', methods=['GET'])
++def get_packing_api():
++    err = _auth_check()
++    if err: return err
++    ids_str = request.args.get('ids', '')
++    if not ids_str:
++        return jsonify([])
++    ids = [int(x) for x in ids_str.split(',') if x.strip().isdigit()]
++    db = SessionWhatsApp()
++    try:
++        from models import Order, OrderItem
++        result = []
++        for oid in ids:
++            o = db.query(Order).get(oid)
++            if not o: continue
++            items = db.query(OrderItem).filter(OrderItem.order_id == o.id).all()
++            items_data = [{'product_name': i.product_name, 'product_price': i.product_price, 'quantity': i.quantity} for i in items]
++            subtotal = sum(i.product_price * i.quantity for i in items)
++            result.append({'id': o.id, 'customer_name': o.customer_name, 'phone': o.phone, 'address': o.address, 'location_link': o.location_link, 'delivery_charge': o.delivery_charge, 'status': o.status, 'items': items_data, 'subtotal': subtotal, 'total': subtotal + (o.delivery_charge or 0)})
++        return jsonify(result)
++    finally:
++        db.close()
++
++from flask import send_from_directory as _sfd
++@dashboard_bp.route('/static/product_images/<path:filename>')
++def serve_product_image(filename):
++    return _sfd(PRODUCT_IMAGE_DIR, filename)
+
+=======
+Created At: 2026-06-14T14:32:17Z
+Completed At: 2026-06-14T14:32:19Z
+
+				The command completed successfully.
+				Output:
+				warning: in the working copy of 'routes/dashboard.py', LF will be replaced by CRLF the next time Git touches it
+diff --git a/routes/dashboard.py b/routes/dashboard.py
+index 587f070..58a78c4 100644
+--- a/routes/dashboard.py
++++ b/routes/dashboard.py
+@@ -947,3 +947,59 @@ def fire_conversion_api():
+         return jsonify({"error": str(e)}), 500
+     finally:
+         db_saas.close()
++
++
++# ─────────────────────────────────────────────
++#  PRODUCTS API
++# ─────────────────────────────────────────────
++import os
++from werkzeug.utils import secure_filename
++import uuid as _uuid
++    finally:
++        db.close()
++
++@dashboard_bp.route('/api/orders/<int:oid>', methods=['DELETE'])
++def delete_order_api(oid):
++    err = _auth_check()
++    if err: return err
++    db = SessionWhatsApp()
++    try:
++        from models import Order, OrderItem
++        db.query(OrderItem).filter(OrderItem.order_id == oid).delete()
++        o = db.query(Order).get(oid)
++        if o: db.delete(o)
++        db.commit()
++        return jsonify({'status': 'success'})
++    except Exception as e:
++        db.rollback()
++        return jsonify({'error': str(e)}), 500
++    finally:
++        db.close()
++
++@dashboard_bp.route('/api/orders/packing', methods=['GET'])
++def get_packing_api():
++    err = _auth_check()
++    if err: return err
++    ids_str = request.args.get('ids', '')
++    if not ids_str:
++        return jsonify([])
++    ids = [int(x) for x in ids_str.split(',') if x.strip().isdigit()]
++    db = SessionWhatsApp()
++    try:
++        from models import Order, OrderItem
++        result = []
++        for oid in ids:
++            o = db.query(Order).get(oid)
++            if not o: continue
++            items = db.query(OrderItem).filter(OrderItem.order_id == o.id).all()
++            items_data = [{'product_name': i.product_name, 'product_price': i.product_price, 'quantity': i.quantity} for i in items]
++            subtotal = sum(i.product_price * i.quantity for i in items)
++            result.append({'id': o.id, 'customer_name': o.customer_name, 'phone': o.phone, 'address': o.address, 'location_link': o.location_link, 'delivery_charge': o.delivery_charge, 'status': o.status, 'items': items_data, 'subtotal': subtotal, 'total': subtotal + (o.delivery_charge or 0)})
++        return jsonify(result)
++    finally:
++        db.close()
++
++from flask import send_from_directory as _sfd
++@dashboard_bp.route('/static/product_images/<path:filename>')
++def serve_product_image(filename):
++    return _sfd(PRODUCT_IMAGE_DIR, filename)
+
+>>>>>>> aed7e9e5d444501ed3d150681887b2334c720e52

@@ -1,0 +1,593 @@
+{% extends "base.html" %}
+{% set active_page = "settings" %}
+
+{% block extra_head %}
+<style>
+    /* ── SETTINGS LAYOUT ── */
+    .settings-layout {
+        display: flex;
+        height: 100%;
+        width: 100%;
+        overflow: hidden;
+    }
+
+    /* ── LEFT SIDEBAR TABS ── */
+    .settings-sidebar {
+        width: 240px;
+        min-width: 240px;
+        background: var(--bg-sidebar);
+        border-right: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        padding: 16px 0;
+        gap: 4px;
+    }
+    .settings-sidebar-header {
+        padding: 8px 20px 16px;
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--text-3);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    .settings-tab {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 20px;
+        cursor: pointer;
+        border-radius: 0;
+        color: var(--text-2);
+        font-size: 13px;
+        font-weight: 500;
+        transition: all 0.2s;
+        position: relative;
+        border-left: 3px solid transparent;
+        user-select: none;
+    }
+    .settings-tab:hover {
+        background: var(--bg-item-hover);
+        color: var(--text-1);
+    }
+    .settings-tab.active {
+        background: rgba(0,168,132,0.08);
+        color: var(--green);
+        border-left-color: var(--green);
+    }
+    .settings-tab .tab-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .settings-tab .tab-icon svg { width: 18px; height: 18px; }
+    .settings-tab.active .tab-icon { background: rgba(0,168,132,0.15); }
+    .settings-tab:not(.active) .tab-icon { background: var(--surface); }
+    .tab-label { flex: 1; line-height: 1.2; }
+    .tab-label .tab-title { font-size: 13px; font-weight: 600; }
+    .tab-label .tab-sub { font-size: 10px; color: var(--text-3); margin-top: 1px; }
+    .settings-tab.active .tab-label .tab-sub { color: rgba(0,168,132,0.7); }
+    .settings-sidebar-divider {
+        height: 1px;
+        background: var(--border);
+        margin: 8px 16px;
+    }
+
+    /* ── MAIN CONTENT ── */
+    .settings-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 32px;
+        background: var(--bg-darkest);
+    }
+    .settings-content::-webkit-scrollbar { width: 4px; }
+    .settings-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,.08); border-radius: 4px; }
+    .settings-panel { display: none; }
+    .settings-panel.active { display: block; animation: panelIn 0.2s ease; }
+    @keyframes panelIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    .panel-header { margin-bottom: 28px; }
+    .panel-header h1 { font-size: 22px; font-weight: 700; color: var(--text-1); margin-bottom: 6px; }
+    .panel-header p { font-size: 13px; color: var(--text-2); line-height: 1.5; }
+
+    .panel-card {
+        background: var(--bg-sidebar);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 24px;
+        margin-bottom: 20px;
+    }
+    .panel-card h2 {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-1);
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .panel-card h2 svg { width: 16px; height: 16px; color: var(--green); flex-shrink: 0; }
+
+    /* ── FORM GROUPS WITH COPY ── */
+    .form-group { margin-bottom: 18px; }
+    .form-group:last-child { margin-bottom: 0; }
+    .form-group label {
+        display: block;
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--text-2);
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        margin-bottom: 8px;
+    }
+    .field-with-copy {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .field-with-copy input {
+        flex: 1;
+        background: var(--bg-input);
+        border: 1px solid var(--border);
+        color: var(--text-1);
+        padding: 11px 14px;
+        border-radius: 10px;
+        font-family: 'Inter', sans-serif;
+        font-size: 13px;
+        transition: border 0.2s;
+        outline: none;
+    }
+    .field-with-copy input:focus { border-color: var(--green); box-shadow: 0 0 0 3px var(--green-glow); }
+    .field-with-copy input[readonly] {
+        background: rgba(0,168,132,0.04);
+        border-color: rgba(0,168,132,0.2);
+        color: var(--green);
+        cursor: default;
+        font-family: monospace;
+        font-size: 12px;
+    }
+    .copy-btn {
+        width: 38px;
+        height: 38px;
+        flex-shrink: 0;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        color: var(--text-2);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+        position: relative;
+    }
+    .copy-btn:hover { background: var(--green-glow); border-color: var(--green); color: var(--green); }
+    .copy-btn.copied { background: var(--green-glow); border-color: var(--green); color: var(--green); }
+    .copy-btn svg { width: 15px; height: 15px; }
+    .field-hint { font-size: 11px; color: var(--text-3); margin-top: 6px; line-height: 1.5; }
+
+    .btn-save {
+        background: linear-gradient(135deg, var(--green), var(--green-deep));
+        color: white;
+        border: none;
+        padding: 11px 24px;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 600;
+        font-family: 'Inter', sans-serif;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 4px 14px var(--green-glow);
+    }
+    .btn-save:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,168,132,0.4); }
+    .btn-save svg { width: 15px; height: 15px; }
+
+    .btn-logout {
+        background: var(--surface);
+        color: var(--danger);
+        border: 1px solid var(--border);
+        padding: 11px 24px;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-family: 'Inter', sans-serif;
+    }
+    .btn-logout:hover { background: rgba(255,107,107,0.1); border-color: var(--danger); }
+    .btn-logout svg { width: 15px; height: 15px; }
+
+    /* ── TOAST ── */
+    .toast {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: var(--green);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 10px;
+        font-size: 13px;
+        font-weight: 500;
+        box-shadow: 0 4px 16px rgba(0,168,132,0.4);
+        transform: translateY(80px);
+        opacity: 0;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.error { background: var(--danger); box-shadow: 0 4px 16px rgba(255,107,107,0.4); }
+    .toast svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+    /* ── NOTE BADGE ── */
+    .note-badge {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        background: rgba(0,168,132,0.06);
+        border: 1px solid rgba(0,168,132,0.15);
+        border-radius: 10px;
+        padding: 12px 14px;
+        margin-top: 16px;
+    }
+    .note-badge svg { width: 16px; height: 16px; color: var(--green); flex-shrink: 0; margin-top: 1px; }
+    .note-badge p { font-size: 12px; color: var(--text-2); line-height: 1.5; }
+
+    /* ── MOBILE ── */
+    @media (max-width: 767px) {
+        .settings-sidebar { width: 60px; min-width: 60px; padding: 12px 0; }
+        .settings-sidebar-header { display: none; }
+        .settings-tab { padding: 14px; justify-content: center; border-left-width: 0; border-bottom: 3px solid transparent; }
+        .settings-tab.active { border-bottom-color: var(--green); border-left-color: transparent; }
+        .tab-label { display: none; }
+        .tab-icon { margin: 0 !important; }
+        .settings-content { padding: 20px 16px; }
+        .settings-sidebar { flex-direction: column; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="settings-layout">
+
+    <!-- ══ LEFT SIDEBAR TABS ══ -->
+    <div class="settings-sidebar">
+        <div class="settings-sidebar-header">Configuration</div>
+
+        <div class="settings-tab active" onclick="switchTab('meta')" id="tab-meta">
+            <div class="tab-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+                </svg>
+            </div>
+            <div class="tab-label">
+                <div class="tab-title">Meta Conv. API</div>
+                <div class="tab-sub">Conversions & Webhooks</div>
+            </div>
+        </div>
+
+        <div class="settings-tab" onclick="switchTab('whatsapp')" id="tab-whatsapp">
+            <div class="tab-icon">
+                <svg viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                </svg>
+            </div>
+            <div class="tab-label">
+                <div class="tab-title">WhatsApp Cloud</div>
+                <div class="tab-sub">Phone ID & Tokens</div>
+            </div>
+        </div>
+
+        <div class="settings-sidebar-divider"></div>
+
+        <div class="settings-tab" onclick="switchTab('security')" id="tab-security">
+            <div class="tab-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+            </div>
+            <div class="tab-label">
+                <div class="tab-title">Security</div>
+                <div class="tab-sub">Password & Account</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ MAIN CONTENT AREA ══ -->
+    <div class="settings-content">
+
+        <!-- ── Meta Conversion API Panel ── -->
+        <div class="settings-panel active" id="panel-meta">
+            <div class="panel-header">
+                <h1>Meta Conversion API</h1>
+                <p>Configure your Meta Conversions API credentials for tracking and retargeting events from WhatsApp conversations.</p>
+            </div>
+
+            <div class="panel-card">
+                <h2>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                    Dataset & Token
+                </h2>
+
+                <div class="form-group">
+                    <label>Meta Dataset ID</label>
+                    <div class="field-with-copy">
+                        <input type="text" id="set_meta_dataset" placeholder="e.g. 1568141444274727">
+                        <button class="copy-btn" onclick="copyField('set_meta_dataset', this)" title="Copy">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Meta Access Token</label>
+                    <div class="field-with-copy">
+                        <input type="password" id="set_meta_token" placeholder="EAAQ02uTY1vw…">
+                        <button class="copy-btn" onclick="copyField('set_meta_token', this)" title="Copy">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-card">
+                <h2>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                    Webhook Configuration
+                </h2>
+
+                <div class="form-group">
+                    <label>Webhook Verify Token</label>
+                    <div class="field-with-copy">
+                        <input type="text" id="set_verify_token" placeholder="myverifytoken">
+                        <button class="copy-btn" onclick="copyField('set_verify_token', this)" title="Copy">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        </button>
+                    </div>
+                    <div class="field-hint">This token must match what you enter in the Meta Developer Webhook settings.</div>
+                </div>
+
+                <div class="form-group">
+                    <label>Callback URL</label>
+                    <div class="field-with-copy">
+                        <input type="text" id="meta_callback_url" readonly>
+                        <button class="copy-btn" onclick="copyField('meta_callback_url', this)" title="Copy Callback URL">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        </button>
+                    </div>
+                    <div class="field-hint">Paste this URL into your Meta App's Webhook Callback URL field.</div>
+                </div>
+
+                <div class="note-badge">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    <p>Token changes require a server restart to take full effect. The Callback URL is automatically derived from your current server host.</p>
+                </div>
+            </div>
+
+            <button class="btn-save" onclick="saveMetaSettings()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                Save Meta Settings
+            </button>
+        </div>
+
+        <!-- ── WhatsApp Cloud API Panel ── -->
+        <div class="settings-panel" id="panel-whatsapp">
+            <div class="panel-header">
+                <h1>WhatsApp Cloud API</h1>
+                <p>Configure your WhatsApp Business account credentials for sending and receiving messages through the WhatsApp Cloud API.</p>
+            </div>
+
+            <div class="panel-card">
+                <h2>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2.18h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.18 6.18l1.27-1.31a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                    Phone Number Configuration
+                </h2>
+
+                <div class="form-group">
+                    <label>WhatsApp Phone Number ID</label>
+                    <div class="field-with-copy">
+                        <input type="text" id="set_phone_id" placeholder="e.g. 1153175711206489">
+                        <button class="copy-btn" onclick="copyField('set_phone_id', this)" title="Copy">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        </button>
+                    </div>
+                    <div class="field-hint">Found in your Meta Developer App → WhatsApp → API Setup</div>
+                </div>
+
+                <div class="form-group">
+                    <label>WhatsApp Access Token</label>
+                    <div class="field-with-copy">
+                        <input type="password" id="set_wa_token" placeholder="EAAQ02uTY1vw…">
+                        <button class="copy-btn" onclick="copyField('set_wa_token', this)" title="Copy">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-card">
+                <h2>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                    Webhook Endpoint
+                </h2>
+
+                <div class="form-group">
+                    <label>Active Callback URL</label>
+                    <div class="field-with-copy">
+                        <input type="text" id="wa_callback_url" readonly>
+                        <button class="copy-btn" onclick="copyField('wa_callback_url', this)" title="Copy Callback URL">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        </button>
+                    </div>
+                    <div class="field-hint">Configure this URL in Meta Developer Console → WhatsApp → Configuration → Webhook.</div>
+                </div>
+
+                <div class="note-badge">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    <p>Access token changes require a server restart. Use a System User token for permanent access without expiry.</p>
+                </div>
+            </div>
+
+            <button class="btn-save" onclick="saveWASettings()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                Save WhatsApp Settings
+            </button>
+        </div>
+
+        <!-- ── Security Panel ── -->
+        <div class="settings-panel" id="panel-security">
+            <div class="panel-header">
+                <h1>Security</h1>
+                <p>Manage your dashboard access credentials and account settings.</p>
+            </div>
+
+            <div class="panel-card">
+                <h2>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    Dashboard Password
+                </h2>
+                <div class="form-group">
+                    <label>New Password</label>
+                    <div class="field-with-copy">
+                        <input type="password" id="set_password" placeholder="Enter new password to change">
+                    </div>
+                    <div class="field-hint">Leave blank to keep current password.</div>
+                </div>
+                <button class="btn-save" onclick="savePassword()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                    Update Password
+                </button>
+            </div>
+
+            <div class="panel-card">
+                <h2>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    Account
+                </h2>
+                <a href="/logout" class="btn-logout">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    Logout
+                </a>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    <span id="toastMsg">Settings saved</span>
+</div>
+
+<script>
+// ── Tab Switching ──
+function switchTab(tabName) {
+    document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.settings-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('tab-' + tabName).classList.add('active');
+    document.getElementById('panel-' + tabName).classList.add('active');
+}
+
+// ── Copy Field ──
+function copyField(fieldId, btn) {
+    const input = document.getElementById(fieldId);
+    const val = input.value;
+    if (!val) return;
+    navigator.clipboard.writeText(val).then(() => {
+        btn.classList.add('copied');
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+        showToast('Copied to clipboard!');
+        setTimeout(() => {
+            btn.classList.remove('copied');
+            btn.innerHTML = orig;
+        }, 2000);
+    });
+}
+
+// ── Toast ──
+function showToast(msg, isError) {
+    const toast = document.getElementById('toast');
+    document.getElementById('toastMsg').textContent = msg || 'Done';
+    toast.classList.toggle('error', !!isError);
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+// ── Load Settings ──
+async function loadSettings() {
+    try {
+        const r = await fetch('/api/settings');
+        const data = await r.json();
+        document.getElementById('set_phone_id').value = data.PHONE_NUMBER_ID || '';
+        document.getElementById('set_wa_token').value = data.WHATSAPP_TOKEN || '';
+        document.getElementById('set_meta_dataset').value = data.META_DATASET_ID || '';
+        document.getElementById('set_meta_token').value = data.META_TOKEN || '';
+        document.getElementById('set_verify_token').value = data.WEBHOOK_VERIFY_TOKEN || '';
+    } catch (e) {
+        console.error(e);
+    }
+    // Set callback URLs
+    const base = window.location.origin;
+    document.getElementById('meta_callback_url').value = base + '/webhook';
+    document.getElementById('wa_callback_url').value = base + '/webhook';
+}
+
+// ── Save Meta Settings ──
+async function saveMetaSettings() {
+    const payload = {
+        META_DATASET_ID: document.getElementById('set_meta_dataset').value,
+        META_TOKEN: document.getElementById('set_meta_token').value,
+        WEBHOOK_VERIFY_TOKEN: document.getElementById('set_verify_token').value
+    };
+    try {
+        await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        showToast('Meta settings saved!');
+    } catch (e) {
+        showToast('Error saving settings', true);
+    }
+}
+
+// ── Save WA Settings ──
+async function saveWASettings() {
+    const payload = {
+        PHONE_NUMBER_ID: document.getElementById('set_phone_id').value,
+        WHATSAPP_TOKEN: document.getElementById('set_wa_token').value
+    };
+    try {
+        await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        showToast('WhatsApp settings saved!');
+    } catch (e) {
+        showToast('Error saving settings', true);
+    }
+}
+
+// ── Save Password ──
+async function savePassword() {
+    const pwd = document.getElementById('set_password').value;
+    if (!pwd) { showToast('Enter a new password first', true); return; }
+    try {
+        await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ DASHBOARD_PASSWORD: pwd }) });
+        document.getElementById('set_password').value = '';
+        showToast('Password updated!');
+    } catch (e) {
+        showToast('Error updating password', true);
+    }
+}
+
+window.onload = loadSettings;
+</script>
+{% endblock %}

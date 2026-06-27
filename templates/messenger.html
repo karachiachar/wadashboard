@@ -1,0 +1,3194 @@
+{% extends "base.html" %}
+{% set active_page = "messenger" %}
+
+{% block extra_head %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
+    <style>
+
+        /* ── LAYOUT ── */
+        .main-container { display:flex;width:100%;height:100%;flex:1;min-height:0;position:relative; }
+
+        /* ── SIDEBAR ── */
+        .sidebar { width:360px;min-width:360px;border-right:1px solid var(--border);display:flex;flex-direction:column;background:var(--bg-sidebar);z-index:2;height:100%; position:relative; }
+        .sidebar-header { background:var(--bg-header);padding:0 16px;height:64px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-shrink:0; }
+        .sidebar-brand { display:flex;align-items:center;gap:10px; }
+        .brand-logo { width:36px;height:36px;background:linear-gradient(135deg,var(--green),var(--green-deep));border-radius:10px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px var(--green-glow);flex-shrink:0; }
+        .brand-logo svg { width:18px;height:18px;fill:white; }
+        .brand-text { font-size:15px;font-weight:600;color:var(--text-1); }
+        .icon-btn { width:36px;height:36px;background:none;border:none;border-radius:50%;color:var(--text-2);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background var(--t),color var(--t);text-decoration:none; }
+        .icon-btn:hover { background:var(--surface);color:var(--text-1); }
+        .icon-btn svg { width:20px;height:20px; }
+        .search-bar-wrap { padding:10px 12px;background:var(--bg-sidebar);flex-shrink:0;border-bottom:1px solid var(--border); }
+        .search-bar { display:flex;align-items:center;background:var(--bg-input);border-radius:10px;padding:0 12px;gap:8px;border:1px solid transparent;transition:border-color var(--t); }
+        .search-bar:focus-within { border-color:var(--green); }
+        .search-bar svg { color:var(--text-3);flex-shrink:0; }
+        .search-bar input { flex:1;background:none;border:none;padding:9px 0;color:var(--text-1);font-size:14px;font-family:'Inter',sans-serif;outline:none; }
+        .search-bar input::placeholder { color:var(--text-3); }
+        .chat-list { flex:1;overflow-y:auto;display:flex;flex-direction:column; }
+        .chat-list::-webkit-scrollbar { width:4px; }
+        .chat-list::-webkit-scrollbar-thumb { background:rgba(255,255,255,.08);border-radius:4px; }
+        .chat-item { padding:12px 16px;cursor:pointer;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);-webkit-tap-highlight-color:transparent;transition:background var(--t);position:relative; }
+        .chat-item:hover { background:var(--bg-item-hover); }
+        .chat-item.active { background:var(--bg-item-active); }
+        .chat-item.active::before { content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--green);border-radius:0 3px 3px 0; }
+        .avatar { border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;color:white;flex-shrink:0;letter-spacing:.5px; }
+        .chat-item-body { flex:1;min-width:0; }
+        .chat-item-top { display:flex;align-items:center;justify-content:space-between;margin-bottom:3px; }
+        .phone-num { font-weight:500;color:var(--text-1);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+        .chat-time { font-size:11px;color:var(--text-2);flex-shrink:0;margin-left:8px; }
+        .preview-txt { color:var(--text-2);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1; }
+        .sidebar-empty { flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;text-align:center; }
+        .sidebar-empty p { color:var(--text-3);font-size:14px; }
+
+        /* ── CHAT WINDOW ── */
+        .chat-window { flex:1;display:flex;flex-direction:column;background:var(--bg-chat);z-index:1;height:100%;position:relative; }
+        .chat-window::before { content:'';position:absolute;inset:0;background-image:radial-gradient(circle,rgba(255,255,255,.012) 1px,transparent 1px);background-size:28px 28px;pointer-events:none;z-index:0; }
+        .chat-header { background:var(--bg-header);padding:0 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;height:64px;flex-shrink:0;z-index:2;position:relative; }
+        .back-btn { display:none;background:none;border:none;color:var(--green);cursor:pointer;padding:6px;border-radius:50%;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;transition:background var(--t); }
+        .back-btn:hover { background:var(--surface); }
+        .back-btn svg { width:22px;height:22px; }
+        .chat-header-info { flex:1;min-width:0; }
+        .chat-header-name { font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+        .chat-header-status { font-size:12px;color:var(--green);display:flex;align-items:center;gap:4px; }
+        .status-dot { width:7px;height:7px;background:var(--green);border-radius:50%;animation:pulse 2s ease-in-out infinite; }
+        @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.8)} }
+        .copy-phone-btn { display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:5px 10px;color:var(--text-2);font-size:12px;font-family:'Inter',sans-serif;cursor:pointer;transition:all var(--t); }
+        .copy-phone-btn:hover { border-color:var(--green);color:var(--green); }
+        .copy-phone-btn svg { width:13px;height:13px; }
+
+        /* ── MESSAGES ── */
+        .message-area { flex:1;padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;box-sizing:border-box;position:relative;z-index:1; }
+        .message-area::-webkit-scrollbar { width:4px; }
+        .message-area::-webkit-scrollbar-thumb { background:rgba(255,255,255,.08);border-radius:4px; }
+        .date-separator { display:flex;align-items:center;justify-content:center;margin:10px 0 6px; }
+        .date-pill { background:rgba(255,255,255,.07);border:1px solid var(--border);color:var(--text-2);font-size:11px;padding:3px 12px;border-radius:20px;font-weight:500; }
+        .msg { max-width:68%;padding:9px 14px 6px;border-radius:12px;font-size:14px;line-height:1.5;word-wrap:break-word;position:relative;animation:fsi .2s ease both; }
+        @keyframes fsi { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+        .incoming { background:var(--bubble-in);align-self:flex-start;border-top-left-radius:4px;color:var(--text-1); }
+        .outgoing { background:var(--bubble-out);align-self:flex-end;border-top-right-radius:4px;color:#e9edef; }
+        .msg-footer { display:flex;align-items:center;justify-content:flex-end;gap:4px;margin-top:4px; }
+        .msg-time { font-size:10px;color:rgba(233,237,239,.55); }
+        .msg-tick svg { width:14px;height:14px;color:#53bdeb; }
+        
+        .quick-fwd-btn { position:absolute; top:50%; transform:translateY(-50%); width:32px; height:32px; background:var(--bg-header); border:1px solid var(--border); border-radius:50%; display:flex; align-items:center; justify-content:center; color:var(--text-2); cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.2); transition:all var(--t); z-index:10; }
+        .quick-fwd-btn:hover { color:var(--text-1); background:var(--surface); }
+        .quick-fwd-btn svg { width:16px; height:16px; }
+        .msg.incoming .quick-fwd-btn { right:-40px; }
+        .msg.outgoing .quick-fwd-btn { left:-40px; transform:translateY(-50%) scaleX(-1); } /* flip icon for outgoing? actually whatsapp forward is always right-facing */
+        .msg.outgoing .quick-fwd-btn { left:-40px; transform:translateY(-50%); }
+
+        /* ── SCROLL BTN ── */
+        .scroll-bottom-btn { position:absolute;bottom:150px;right:20px;width:40px;height:40px;background:var(--bg-header);border:1px solid var(--border);border-radius:50%;color:var(--text-2);cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,.4);z-index:10;transition:all var(--t); }
+        .scroll-bottom-btn:hover { background:var(--green);color:white;border-color:var(--green); }
+        .scroll-bottom-btn.visible { display:flex; }
+        .scroll-bottom-btn svg { width:18px;height:18px; }
+
+        /* ── QUICK ACTIONS BAR ── */
+        .quick-actions { background:var(--bg-input);border-top:1px solid var(--border);padding:8px 16px;display:flex;align-items:center;gap:8px;flex-shrink:0;z-index:2;position:relative;overflow-x:auto; }
+        .quick-actions::-webkit-scrollbar { display:none; }
+        .qa-label { font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.6px;white-space:nowrap;margin-right:4px;flex-shrink:0; }
+        .qa-btn { display:flex;align-items:center;gap:6px;padding:6px 13px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--text-2);font-size:12px;font-weight:500;font-family:'Inter',sans-serif;cursor:pointer;transition:all var(--t);white-space:nowrap;flex-shrink:0; }
+        .qa-btn:hover { border-color:var(--green);color:var(--green);background:var(--green-glow); }
+        .qa-btn:active { transform:scale(.96); }
+        .qa-btn svg { width:13px;height:13px;flex-shrink:0; }
+        .qa-btn.loading { opacity:.6;pointer-events:none; }
+        .qa-btn.loading svg { animation:spin .8s linear infinite; }
+        .qa-btn.success { border-color:var(--green);color:var(--green);background:var(--green-glow); }
+        .qa-divider { width:1px;height:20px;background:var(--border);flex-shrink:0;margin:0 2px; }
+        @keyframes spin { to{transform:rotate(360deg)} }
+
+        /* ── INPUT BAR ── */
+        .input-area { background:var(--bg-input);padding:10px 16px;padding-bottom:calc(10px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:8px;border-top:1px solid var(--border);min-height:64px;flex-shrink:0;z-index:2;position:relative; }
+        .input-area input, .input-area textarea { flex:1;background:var(--bg-chat);border:1px solid var(--border);border-radius:24px;padding:11px 18px;color:var(--text-1);font-size:14px;font-family:'Inter',sans-serif;outline:none;transition:border-color var(--t),box-shadow var(--t);resize:none;max-height:120px;overflow-y:auto;line-height:1.4; }
+        .input-area input::placeholder, .input-area textarea::placeholder { color:var(--text-3); }
+        .input-area input:focus, .input-area textarea:focus { border-color:var(--green);box-shadow:0 0 0 3px var(--green-glow); }
+        .attach-btn { width:40px;height:40px;flex-shrink:0;background:var(--surface);border:1px solid var(--border);border-radius:50%;color:var(--text-2);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all var(--t);position:relative; }
+        .attach-btn:hover { background:var(--green-glow);border-color:var(--green);color:var(--green); }
+        .attach-btn.open { background:var(--green-glow);border-color:var(--green);color:var(--green); }
+        /* ── CREATE ORDER BTN ── */
+        .create-order-btn { width:40px;height:40px;flex-shrink:0;background:var(--surface);border:1px solid var(--border);border-radius:50%;color:var(--text-2);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all var(--t);position:relative; }
+        .create-order-btn:hover { background:rgba(245,158,11,0.15);border-color:#f59e0b;color:#f59e0b; }
+        .create-order-btn.panel-open { background:rgba(245,158,11,0.2);border-color:#f59e0b;color:#f59e0b; }
+        .create-order-btn svg { width:18px;height:18px; }
+        /* ── FLOATING ORDER PANEL ── */
+        .order-float-panel {
+            position:absolute;
+            bottom:calc(100% + 8px);
+            right:16px;
+            width:420px;
+            max-width:calc(100vw - 32px);
+            background:#182533;
+            border:1px solid rgba(255,255,255,0.12);
+            border-radius:16px;
+            box-shadow:0 -8px 40px rgba(0,0,0,0.6), 0 4px 20px rgba(0,0,0,0.4);
+            z-index:200;
+            display:none;
+            flex-direction:column;
+            max-height:72vh;
+            animation:floatPanelIn 0.22s cubic-bezier(.34,1.56,.64,1);
+            overflow:hidden;
+        }
+        @keyframes floatPanelIn { from{opacity:0;transform:translateY(16px) scale(0.97)} to{opacity:1;transform:translateY(0) scale(1)} }
+        .order-float-panel.visible { display:flex; }
+        .order-float-panel.minimized { max-height:52px; }
+        .ofp-header {
+            background:rgba(245,158,11,0.1);
+            border-bottom:1px solid rgba(255,255,255,0.08);
+            padding:12px 16px;
+            display:flex;
+            align-items:center;
+            gap:10px;
+            flex-shrink:0;
+            cursor:default;
+            user-select:none;
+        }
+        .ofp-icon { width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#f59e0b,#d97706);display:flex;align-items:center;justify-content:center;flex-shrink:0; }
+        .ofp-icon svg { width:15px;height:15px;color:white; }
+        .ofp-title { flex:1;font-size:14px;font-weight:700;color:var(--text-1); }
+        .ofp-subtitle { font-size:11px;color:rgba(245,158,11,0.8);margin-top:1px; }
+        .ofp-header-btn { width:28px;height:28px;background:none;border:none;border-radius:6px;color:var(--text-2);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s; }
+        .ofp-header-btn:hover { background:rgba(255,255,255,0.08);color:var(--text-1); }
+        .ofp-header-btn svg { width:14px;height:14px; }
+        .ofp-body { flex:1;overflow-y:auto;padding:16px;min-height:0; }
+        .ofp-body::-webkit-scrollbar { width:4px; } .ofp-body::-webkit-scrollbar-thumb { background:rgba(255,255,255,.08);border-radius:4px; }
+        /* ORDER MODAL STYLES */
+        .om-step-indicator { display:flex; align-items:center; margin-bottom:18px; }
+        .om-step { display:flex; align-items:center; flex:1; }
+        .om-step-dot { width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; flex-shrink:0; transition:all 0.2s; }
+        .om-step-dot.done { background:var(--green); color:white; }
+        .om-step-dot.active { background:rgba(0,168,132,0.2); color:var(--green); border:2px solid var(--green); }
+        .om-step-dot.inactive { background:var(--bg-input); color:var(--text-3); border:2px solid rgba(255,255,255,0.1); }
+        .om-step-lbl { font-size:10px; font-weight:600; margin-left:5px; }
+        .om-step-lbl.done,.om-step-lbl.active { color:var(--green); }
+        .om-step-lbl.inactive { color:var(--text-3); }
+        .om-step-line { flex:1; height:2px; background:rgba(255,255,255,0.1); margin:0 6px; transition:background 0.3s; }
+        .om-step-line.done { background:var(--green); }
+        .om-step-content { display:none; }
+        .om-step-content.active { display:block; }
+        .ofp-form-group { margin-bottom:12px; }
+        .ofp-form-label { display:block;font-size:10px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px; }
+        .ofp-form-input,.ofp-form-textarea { width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:9px 12px;color:var(--text-1);font-size:13px;font-family:'Inter',sans-serif;outline:none;transition:border-color 0.2s; }
+        .ofp-form-input::placeholder,.ofp-form-textarea::placeholder { color:var(--text-3); }
+        .ofp-form-input:focus,.ofp-form-textarea:focus { border-color:#f59e0b;box-shadow:0 0 0 3px rgba(245,158,11,0.12); }
+        .ofp-form-input[readonly] { opacity:0.7;cursor:default; }
+        .ofp-form-textarea { resize:none;min-height:60px;line-height:1.4; }
+        .ofp-btn-row { display:flex;gap:8px;margin-top:12px; }
+        .ofp-btn-back { flex:1;padding:10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:var(--text-2);font-size:13px;font-weight:500;font-family:'Inter',sans-serif;cursor:pointer;transition:all 0.2s; }
+        .ofp-btn-back:hover { background:rgba(255,255,255,.1);color:var(--text-1); }
+        .ofp-btn-next { flex:2;padding:10px;background:linear-gradient(135deg,#f59e0b,#d97706);border:none;border-radius:8px;color:white;font-size:13px;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:6px; }
+        .ofp-btn-next:hover { box-shadow:0 4px 16px rgba(245,158,11,0.4);transform:translateY(-1px); }
+        .ofp-btn-next:disabled { opacity:.5;pointer-events:none;transform:none; }
+        .ofp-btn-next svg { width:13px;height:13px; }
+        .om-ps-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:8px; margin-bottom:12px; max-height:240px; overflow-y:auto; padding-right:2px; }
+        .om-ps-grid::-webkit-scrollbar { width:4px; } .om-ps-grid::-webkit-scrollbar-thumb { background:rgba(255,255,255,.08); border-radius:4px; }
+        .om-ps-card { background:rgba(255,255,255,.04); border:2px solid rgba(255,255,255,.08); border-radius:10px; padding:8px; cursor:pointer; transition:all 0.2s; text-align:center; }
+        .om-ps-card:hover { border-color:rgba(245,158,11,0.4); }
+        .om-ps-card.selected { border-color:#f59e0b; background:rgba(245,158,11,0.08); }
+        .om-ps-img { width:48px; height:48px; border-radius:8px; background:rgba(255,255,255,.04); display:flex; align-items:center; justify-content:center; margin:0 auto 6px; overflow:hidden; }
+        .om-ps-img img { width:100%; height:100%; object-fit:cover; }
+        .om-ps-img svg { width:22px; height:22px; color:var(--text-3); }
+        .om-ps-name { font-size:11px; font-weight:600; color:var(--text-1); margin-bottom:2px; line-height:1.2; }
+        .om-ps-price { font-size:11px; color:#f59e0b; font-weight:700; }
+        .om-qty-ctrl { display:flex; align-items:center; justify-content:center; gap:5px; margin-top:5px; }
+        .om-qty-btn { width:20px; height:20px; border-radius:50%; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1); color:var(--text-1); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:12px; transition:all 0.2s; }
+        .om-qty-btn:hover { border-color:#f59e0b; color:#f59e0b; }
+        .om-qty-val { font-size:12px; font-weight:700; color:var(--text-1); min-width:16px; text-align:center; }
+        .om-review-sec { background:rgba(255,255,255,.04); border-radius:8px; padding:10px 12px; margin-bottom:10px; }
+        .om-review-sec h4 { font-size:9px; font-weight:700; color:var(--text-3); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; }
+        .om-review-row { display:flex; justify-content:space-between; font-size:12px; padding:3px 0; }
+        .om-review-row .r-l { color:var(--text-2); } .om-review-row .r-v { color:var(--text-1); font-weight:500; }
+        .om-divider { height:1px; background:rgba(255,255,255,.08); margin:6px 0; }
+        .om-total { display:flex; justify-content:space-between; font-size:14px; font-weight:800; color:#f59e0b; padding:6px 0 0; }
+        @media (max-width:767px) {
+            .order-float-panel { right:8px; left:8px; width:auto; bottom:calc(100% + 6px); max-height:65vh; }
+        }
+        .attach-btn svg { width:18px;height:18px;transition:transform .2s; }
+        .attach-btn.open svg { transform:rotate(45deg); }
+        .send-btn { width:42px;height:42px;flex-shrink:0;background:linear-gradient(135deg,var(--green),var(--green-deep));border:none;border-radius:50%;color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px var(--green-glow);transition:transform .15s,box-shadow .15s; }
+        .send-btn:hover { transform:scale(1.08);box-shadow:0 6px 20px rgba(0,168,132,.45); }
+        .send-btn:active { transform:scale(.95); }
+        .send-btn svg { width:18px;height:18px; }
+        .send-btn.sending { animation:spinSend .4s ease; }
+        @keyframes spinSend { 0%{transform:rotate(0)} 100%{transform:rotate(360deg)} }
+
+        /* ── MIC BUTTON ── */
+        .mic-btn { width:42px;height:42px;flex-shrink:0;background:linear-gradient(135deg,var(--green),var(--green-deep));border:none;border-radius:50%;color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px var(--green-glow);transition:transform .15s,box-shadow .15s; }
+        .mic-btn:hover { transform:scale(1.08);box-shadow:0 6px 20px rgba(0,168,132,.45); }
+        .mic-btn:active { transform:scale(.95); }
+        .mic-btn svg { width:18px;height:18px; }
+        .mic-btn.hidden { display:none; }
+        .send-btn.hidden { display:none; }
+
+        /* ── RECORDING BAR ── */
+        .recording-bar {
+            position:absolute;inset:0;
+            background:var(--bg-input);
+            display:none;align-items:center;gap:10px;
+            padding:0 14px;
+            z-index:10;
+            border-top:1px solid var(--border);
+            animation:slideUpBar .2s ease;
+        }
+        @keyframes slideUpBar { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+        .recording-bar.active { display:flex; }
+
+        /* Pulse dot */
+        .rec-dot {
+            width:12px;height:12px;border-radius:50%;
+            background:#ff4444;flex-shrink:0;
+            animation:recPulse 1s ease-in-out infinite;
+        }
+        @keyframes recPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.7)} }
+
+        /* Waveform bars */
+        .rec-wave { display:flex;align-items:center;gap:3px;flex:1;height:32px; }
+        .rec-bar {
+            width:3px;border-radius:3px;
+            background:var(--green);flex-shrink:0;
+            animation:waveDance .6s ease-in-out infinite alternate;
+        }
+        .rec-bar:nth-child(1){height:8px; animation-delay:0s;}
+        .rec-bar:nth-child(2){height:18px;animation-delay:.08s;}
+        .rec-bar:nth-child(3){height:26px;animation-delay:.16s;}
+        .rec-bar:nth-child(4){height:32px;animation-delay:.24s;}
+        .rec-bar:nth-child(5){height:24px;animation-delay:.32s;}
+        .rec-bar:nth-child(6){height:16px;animation-delay:.40s;}
+        .rec-bar:nth-child(7){height:22px;animation-delay:.48s;}
+        .rec-bar:nth-child(8){height:30px;animation-delay:.56s;}
+        .rec-bar:nth-child(9){height:20px;animation-delay:.64s;}
+        .rec-bar:nth-child(10){height:12px;animation-delay:.72s;}
+        @keyframes waveDance { from{transform:scaleY(.3)} to{transform:scaleY(1)} }
+
+        .rec-timer { font-size:15px;font-weight:600;color:var(--text-1);font-variant-numeric:tabular-nums;flex-shrink:0;min-width:44px; }
+
+        .rec-cancel {
+            width:36px;height:36px;background:rgba(255,255,255,.07);border:1px solid var(--border);
+            border-radius:50%;color:var(--danger);cursor:pointer;
+            display:flex;align-items:center;justify-content:center;flex-shrink:0;
+            transition:all var(--t);
+        }
+        .rec-cancel:hover { background:rgba(255,107,107,.15);border-color:var(--danger); }
+        .rec-cancel svg { width:16px;height:16px; }
+
+        .rec-send {
+            width:42px;height:42px;background:linear-gradient(135deg,var(--green),var(--green-deep));
+            border:none;border-radius:50%;color:white;cursor:pointer;
+            display:flex;align-items:center;justify-content:center;flex-shrink:0;
+            box-shadow:0 4px 14px var(--green-glow);
+            transition:transform .15s,box-shadow .15s;
+        }
+        .rec-send:hover { transform:scale(1.08); }
+        .rec-send svg { width:18px;height:18px; }
+        .rec-send.uploading { animation:spinSend .6s linear infinite;pointer-events:none;opacity:.7; }
+
+        /* ── ATTACH POPUP ── */
+        .attach-popup { position:absolute;bottom:calc(100% + 10px);left:16px;background:#1a2a36;border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:14px;display:none;grid-template-columns:repeat(4,1fr);gap:4px;z-index:100;box-shadow:0 16px 48px rgba(0,0,0,.6);animation:popIn .18s cubic-bezier(.34,1.56,.64,1) both;min-width:272px; }
+        @keyframes popIn { from{opacity:0;transform:translateY(12px) scale(.96)} to{opacity:1;transform:translateY(0) scale(1)} }
+        .attach-popup.visible { display:grid; }
+        .ap-item { display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 6px;border-radius:12px;cursor:pointer;transition:background var(--t);border:1px solid transparent; }
+        .ap-item:hover { background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.08); }
+        .ap-item:active { transform:scale(.94); }
+        .ap-icon { width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center; }
+        .ap-icon svg { width:22px;height:22px;color:white; }
+        .ap-label { font-size:11px;font-weight:500;color:var(--text-2);text-align:center; }
+        .c-img  { background:linear-gradient(135deg,#9c27b0,#673ab7); }
+        .c-vid  { background:linear-gradient(135deg,#e53935,#c62828); }
+        .c-doc  { background:linear-gradient(135deg,#1565c0,#0d47a1); }
+        .c-aud  { background:linear-gradient(135deg,#f57c00,#e65100); }
+        .c-int  { background:linear-gradient(135deg,#e91e63,#ad1457); }
+        .c-loc  { background:linear-gradient(135deg,#2e7d32,#1b5e20); }
+        .c-cat  { background:linear-gradient(135deg,#00838f,#006064); }
+        .c-qr   { background:linear-gradient(135deg,#00a884,#005c4b); }
+
+        /* ── CHAT FILTERS ── */
+        .chat-filter-btn { padding:4px 10px; border-radius:12px; font-size:11px; font-weight:700; color:var(--text-2); background:rgba(255,255,255,0.05); border:1px solid transparent; cursor:pointer; transition:all 0.2s; white-space:nowrap; }
+        .chat-filter-btn:hover { color:var(--text-1); background:rgba(255,255,255,0.1); }
+        .chat-filter-btn.active { color:var(--green); background:rgba(0,168,132,0.15); border-color:rgba(0,168,132,0.3); }
+        .chat-order-badge { font-size:10px; font-weight:700; padding:2px 6px; border-radius:8px; margin-left:6px; vertical-align:middle; display:inline-block; line-height:1; }
+        .chat-order-badge.new { color:var(--text-1); background:var(--bg-panel); border:1px solid var(--border); }
+        .chat-order-badge.packed { color:var(--text-1); background:var(--bg-panel); border:1px solid var(--border); }
+        .chat-order-badge.delivered { color:var(--text-1); background:var(--bg-panel); border:1px solid var(--border); }
+        .chat-order-badge.delivered { color:var(--text-1); background:var(--bg-panel); border:1px solid var(--border); }
+        .chat-order-badge.complete { color:var(--text-1); background:var(--bg-panel); border:1px solid var(--border); }
+
+        /* ── SELECTION UI ── */
+        .sel-bar { position:absolute; top:0; left:0; width:100%; height:64px; background:var(--bg-header); z-index:50; display:flex; align-items:center; padding:0 16px; border-bottom:1px solid var(--border); transform:translateY(-100%); transition:transform 0.3s; }
+        .sel-bar.active { transform:translateY(0); }
+        .sel-title { flex:1; font-size:16px; font-weight:600; color:var(--text-1); margin-left:16px; }
+        .sel-action { background:none; border:none; color:var(--text-2); cursor:pointer; padding:8px; border-radius:50%; transition:all 0.2s; display:flex; align-items:center; justify-content:center; }
+        .sel-action:hover { background:rgba(255,255,255,0.1); color:var(--text-1); }
+        .sel-action svg { width:20px; height:20px; }
+        
+        .chat-item.selected { background:rgba(0,168,132,0.15); }
+        .chat-item.selected .avatar { transform:scale(0.9); position:relative; }
+        .chat-item.selected .avatar::after { content:'✓'; position:absolute; bottom:-4px; right:-4px; width:20px; height:20px; background:var(--green); border-radius:50%; color:white; font-size:12px; display:flex; align-items:center; justify-content:center; border:2px solid var(--bg-item-active); }
+        
+        .msg-bubble.selected { position:relative; }
+        .msg-bubble.selected::before { content:''; position:absolute; inset:-4px; background:rgba(0,168,132,0.15); border-radius:12px; pointer-events:none; z-index:0; }
+
+        /* ── MODALS ── */
+        .modal-overlay { position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .2s; }
+        .modal-overlay.active { opacity:1;pointer-events:all; }
+        .modal { background:#182533;border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:28px;width:100%;max-width:440px;box-shadow:0 24px 64px rgba(0,0,0,.7);transform:translateY(20px) scale(.97);transition:transform .25s cubic-bezier(.34,1.56,.64,1);max-height:90vh;overflow-y:auto; }
+        .modal::-webkit-scrollbar { width:4px; }
+        .modal::-webkit-scrollbar-thumb { background:rgba(255,255,255,.08);border-radius:4px; }
+        .modal-overlay.active .modal { transform:translateY(0) scale(1); }
+        .modal-header { display:flex;align-items:center;gap:12px;margin-bottom:22px; }
+        .modal-icon { width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
+        .modal-icon svg { width:20px;height:20px;color:white; }
+        .modal-title { font-size:16px;font-weight:600;color:var(--text-1); }
+        .modal-subtitle { font-size:12px;color:var(--text-2);margin-top:2px; }
+        .modal-close { margin-left:auto;background:none;border:none;cursor:pointer;color:var(--text-2);padding:4px;border-radius:6px;transition:color var(--t); }
+        .modal-close:hover { color:var(--text-1); }
+        .modal-close svg { width:18px;height:18px; }
+        .form-group { margin-bottom:14px; }
+        .form-label { display:block;font-size:11px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px; }
+        .form-input,.form-textarea { width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:11px 14px;color:var(--text-1);font-size:14px;font-family:'Inter',sans-serif;outline:none;transition:border-color var(--t),box-shadow var(--t); }
+        .form-input::placeholder,.form-textarea::placeholder { color:var(--text-3); }
+        .form-input:focus,.form-textarea:focus { border-color:var(--green);box-shadow:0 0 0 3px var(--green-glow); }
+        .form-textarea { resize:none;min-height:80px;line-height:1.5; }
+        .form-row { display:grid;grid-template-columns:1fr 1fr;gap:10px; }
+        .btn-row { display:flex;gap:10px;margin-top:6px; }
+        .btn-cancel { flex:1;padding:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:10px;color:var(--text-2);font-size:14px;font-weight:500;font-family:'Inter',sans-serif;cursor:pointer;transition:all var(--t); }
+        .btn-cancel:hover { background:rgba(255,255,255,.1);color:var(--text-1); }
+        .btn-send-modal { flex:2;padding:12px;background:linear-gradient(135deg,var(--green),var(--green-deep));border:none;border-radius:10px;color:white;font-size:14px;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;transition:all var(--t);display:flex;align-items:center;justify-content:center;gap:8px; }
+        .btn-send-modal:hover { box-shadow:0 4px 20px rgba(0,168,132,.4);transform:translateY(-1px); }
+        .btn-send-modal:disabled { opacity:.55;pointer-events:none;transform:none; }
+        .btn-send-modal svg { width:15px;height:15px; }
+
+        /* ── FILE DROP ZONE ── */
+        .fdz {
+            border:2px dashed rgba(255,255,255,.15);
+            border-radius:14px;
+            padding:28px 20px;
+            text-align:center;
+            cursor:pointer;
+            transition:all var(--t);
+            position:relative;
+            overflow:hidden;
+        }
+        .fdz:hover,.fdz.drag-over { border-color:var(--green);background:var(--green-glow); }
+        .fdz input[type=file] { position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%; }
+        .fdz-icon { width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;opacity:.7; }
+        .fdz-icon svg { width:26px;height:26px;color:white; }
+        .fdz-title { font-size:14px;font-weight:500;color:var(--text-1);margin-bottom:4px; }
+        .fdz-subtitle { font-size:12px;color:var(--text-2);line-height:1.5; }
+        .fdz-hint { font-size:11px;color:var(--text-3);margin-top:6px; }
+
+        /* ── FILE PREVIEW (after selection) ── */
+        .file-preview { display:none;border-radius:14px;overflow:hidden;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08); }
+        .file-preview.visible { display:block; }
+        .fp-img-wrap { position:relative;max-height:200px;overflow:hidden;border-radius:12px 12px 0 0; }
+        .fp-img-wrap img { width:100%;height:200px;object-fit:cover;display:block; }
+        .fp-change-btn { position:absolute;top:8px;right:8px;background:rgba(0,0,0,.6);border:none;border-radius:6px;color:white;font-size:11px;padding:4px 8px;cursor:pointer;font-family:'Inter',sans-serif; }
+        .fp-info { display:flex;align-items:center;gap:12px;padding:12px 14px; }
+        .fp-type-icon { width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
+        .fp-type-icon svg { width:18px;height:18px;color:white; }
+        .fp-name { font-size:13px;font-weight:500;color:var(--text-1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1; }
+        .fp-size { font-size:11px;color:var(--text-2);margin-top:2px; }
+        .fp-change { background:none;border:none;cursor:pointer;color:var(--green);font-size:12px;font-family:'Inter',sans-serif;flex-shrink:0;padding:4px 8px; }
+
+        /* ── UPLOAD PROGRESS ── */
+        .upload-progress { margin-top:12px;display:none; }
+        .upload-progress.visible { display:block; }
+        .up-label { font-size:12px;color:var(--text-2);margin-bottom:6px;display:flex;justify-content:space-between; }
+        .up-bar-wrap { height:4px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden; }
+        .up-bar { height:100%;background:linear-gradient(90deg,var(--green),#00d4a8);border-radius:4px;width:0%;transition:width .3s ease; }
+
+        .autocomplete-item { padding: 10px 12px; cursor: pointer; border-bottom: 1px solid var(--border); transition: background var(--t); }
+        .autocomplete-item:last-child { border-bottom: none; }
+        .autocomplete-item:hover, .autocomplete-item.selected { background: var(--surface); }
+        .ac-shortcut { font-size: 13px; font-weight: 600; color: var(--green); margin-bottom: 4px; }
+        .ac-body { font-size: 12px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .tpl-item { display: flex; align-items: center; justify-content: space-between; padding: 10px; border-bottom: 1px solid var(--border); }
+        .tpl-item:last-child { border-bottom: none; }
+        .tpl-actions button { background: none; border: none; cursor: pointer; color: var(--text-2); padding: 4px; }
+        .tpl-actions button:hover { color: var(--text-1); }
+
+        .up-status { font-size:11px;color:var(--text-2);margin-top:6px;text-align:center;min-height:16px; }
+
+        /* ── QUICK REPLY BUILDER ── */
+        .qr-buttons-wrap { display:flex;flex-direction:column;gap:8px; }
+        .qr-btn-row { display:flex;gap:8px;align-items:center; }
+        .qr-id-inp { width:90px;flex:none; }
+        .qr-remove { background:none;border:none;cursor:pointer;color:var(--danger);padding:4px;border-radius:6px;flex-shrink:0; }
+        .qr-remove svg { width:16px;height:16px; }
+        .btn-add-qr { display:flex;align-items:center;justify-content:center;gap:6px;background:none;border:1px dashed rgba(255,255,255,.15);border-radius:8px;color:var(--text-2);padding:8px 12px;font-size:13px;font-family:'Inter',sans-serif;cursor:pointer;transition:all var(--t);width:100%;margin-top:8px; }
+        .btn-add-qr:hover { border-color:var(--green);color:var(--green); }
+        .qr-counter { font-size:11px;color:var(--text-3);text-align:right;margin-top:4px; }
+
+        /* ── EMPTY PLACEHOLDER ── */
+        .no-chat-selected { display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:40px;text-align:center;z-index:1;position:relative; }
+        .empty-icon-wrap { width:96px;height:96px;background:rgba(0,168,132,.08);border:2px solid rgba(0,168,132,.15);border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:20px;animation:ePulse 3s ease-in-out infinite; }
+        @keyframes ePulse { 0%,100%{box-shadow:0 0 0 0 rgba(0,168,132,.15)} 50%{box-shadow:0 0 0 20px rgba(0,168,132,0)} }
+        .empty-icon-wrap svg { width:44px;height:44px;color:var(--green);opacity:.7; }
+        .empty-title { font-size:20px;font-weight:600;margin-bottom:8px; }
+        .empty-subtitle { font-size:14px;color:var(--text-2);max-width:280px;line-height:1.6; }
+
+        /* ── TOAST ── */
+        .toast { position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg-header);border:1px solid var(--border);color:var(--text-1);font-size:13px;padding:8px 16px;border-radius:20px;box-shadow:0 8px 24px rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:all .3s ease;z-index:400;white-space:nowrap; }
+        .toast.show { opacity:1;transform:translateX(-50%) translateY(0); }
+
+        /* ── TABS ── */
+        .sidebar-tab:hover { color: var(--text-2); }
+        .sidebar-tab.active { color: var(--green) !important; }
+        .sidebar-tab.active svg { fill: var(--green); }
+
+        /* ── FAB ── */
+        .fab-new-msg { position:absolute; bottom:calc(80px + env(safe-area-inset-bottom, 16px)); right:20px; width:52px; height:52px; border-radius:50%; background:var(--green); color:white; border:none; cursor:pointer; box-shadow:0 4px 12px rgba(0,168,132,0.4); display:flex; align-items:center; justify-content:center; z-index:10; transition:transform 0.2s; }
+        .fab-new-msg:hover { transform:scale(1.05); }
+        .fab-new-msg svg { width:24px; height:24px; }
+
+        /* ── MOBILE ── */
+        @media (max-width: 767px) {
+            /* Full-screen layered panels (WhatsApp mobile pattern) */
+            .sidebar {
+                width: 100% !important;
+                min-width: 100% !important;
+                position: absolute;
+                left: 0; top: 0;
+                height: 100%;
+                z-index: 2;
+                transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            .chat-window {
+                width: 100% !important;
+                position: absolute;
+                left: 0; top: 0;
+                height: 100%;
+                z-index: 3;
+                transform: translateX(100%);
+                transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            /* Slide in/out triggers */
+            .main-container.show-chat .sidebar  { transform: translateX(-100%); }
+            .main-container.show-chat .chat-window { transform: translateX(0); }
+
+            /* Show back button, hide empty-state placeholder */
+            .back-btn { display: flex; }
+            .no-chat-selected { display: none; }
+
+            /* Shrink header elements on small screens */
+            .copy-phone-btn span { display: none; }
+            .chat-header-status span { display: none; }
+
+            /* Quick actions: allow horizontal scroll, smaller text */
+            .quick-actions { padding: 6px 10px; gap: 6px; }
+            .qa-btn { font-size: 11px; padding: 5px 10px; }
+            .qa-label { display: none; }
+
+            /* Attachment popup: full-width at bottom of screen */
+            .attach-popup {
+                left: 8px;
+                right: 8px;
+                min-width: unset;
+                grid-template-columns: repeat(4, 1fr);
+                bottom: calc(100% + 6px);
+            }
+            .ap-icon { width: 42px; height: 42px; }
+            .ap-icon svg { width: 20px; height: 20px; }
+            .ap-label { font-size: 10px; }
+
+            /* Message bubbles: slightly wider on small screen */
+            .msg { max-width: 82%; }
+
+            /* Modals: full-width, anchored to bottom of screen */
+            .modal-overlay {
+                align-items: flex-end;
+                padding: 0;
+            }
+            .modal {
+                border-radius: 20px 20px 0 0;
+                max-width: 100%;
+                width: 100%;
+                max-height: 90vh;
+                padding: 20px 16px;
+            }
+
+            /* Form rows stack vertically on mobile */
+            .form-row { grid-template-columns: 1fr; gap: 10px; }
+
+            /* Input area: tighter spacing */
+            .input-area { padding: 8px 10px; padding-bottom: calc(8px + env(safe-area-inset-bottom, 12px)); gap: 6px; }
+            .input-area input { font-size: 15px; padding: 10px 14px; }
+            .attach-btn { width: 38px; height: 38px; }
+            .send-btn { width: 38px; height: 38px; }
+
+            /* Scroll-to-bottom button: keep above taller toolbar area */
+            .scroll-bottom-btn { bottom: 160px; right: 12px; }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="main-container" id="appContainer">
+
+    <!-- ══ SIDEBAR ══ -->
+    <div class="sidebar" style="position:relative; overflow:hidden;">
+    
+        <!-- Chat Selection Bar -->
+        <div class="sel-bar" id="chatSelBar">
+            <button class="back-btn" style="display:flex;" onclick="exitChatSelection()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+            <div class="sel-title" id="chatSelTitle">1 Selected</div>
+            <button class="sel-action" onclick="deleteSelectedChats()" title="Delete Chats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+        </div>
+
+        <div class="search-bar-wrap">
+            <div class="search-bar">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" id="searchInput" placeholder="Search..." oninput="filterSidebar(this.value)">
+            </div>
+        </div>
+
+        <!-- Sorting tags for Chats View -->
+        <div id="chatFilters" style="display:flex; gap:6px; padding:0 16px 8px 16px; overflow-x:auto;">
+            <button class="chat-filter-btn active" id="cf-all" onclick="setChatFilter('all')">All</button>
+            <button class="chat-filter-btn" id="cf-new" onclick="setChatFilter('new')">New</button>
+            <button class="chat-filter-btn" id="cf-packed" onclick="setChatFilter('packed')">Pkg</button>
+            <button class="chat-filter-btn" id="cf-delivered" onclick="setChatFilter('delivered')">Dlv</button>
+            <button class="chat-filter-btn" id="cf-complete" onclick="setChatFilter('complete')">Cmp</button>
+        </div>
+
+        <!-- Chats View -->
+        <div id="chatsView" style="display:flex; flex-direction:column; flex:1; overflow:hidden;">
+            <div class="chat-list" id="chatList" style="flex:1; overflow-y:auto;"></div>
+        </div>
+
+        <!-- Contacts View -->
+        <div id="contactsView" style="display:none; flex-direction:column; flex:1; overflow:hidden;">
+            <div style="padding:12px 16px 4px 16px; display:flex; gap:8px;">
+                <button onclick="openAddContactModal()" style="flex:1; padding:8px; background:var(--bg-3); border:1px solid var(--border); border-radius:8px; cursor:pointer; font-weight:600; color:var(--text-1); transition:0.2s;">➕ Add</button>
+                <button onclick="document.getElementById('vcfUploadInput').click()" style="flex:1; padding:8px; background:var(--bg-3); border:1px solid var(--border); border-radius:8px; cursor:pointer; font-weight:600; color:var(--text-1); transition:0.2s;">📁 Import VCF</button>
+                <input type="file" id="vcfUploadInput" accept=".vcf" style="display:none;" onchange="uploadVCF(this)">
+            </div>
+            <div class="chat-list" id="contactList" style="flex:1; overflow-y:auto; padding-top:8px;"></div>
+        </div>
+
+        <!-- New Message FAB -->
+        <button onclick="openNewMessageModal()" class="fab-new-msg" title="New Message">
+            <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>
+        </button>
+
+        <!-- WhatsApp Style Bottom Tabs -->
+        <div class="sidebar-tabs" style="display:flex; background:var(--bg-2); padding-bottom:env(safe-area-inset-bottom, 12px);">
+            <div class="sidebar-tab active" onclick="switchSidebarTab('chats')" id="tabChats" style="flex:1; text-align:center; padding:12px; cursor:pointer; font-weight:600; color:var(--text-3); border-top:2px solid transparent; transition:all 0.2s; font-size:12px; display:flex; flex-direction:column; align-items:center; gap:4px;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                <span>Chats</span>
+            </div>
+            <div class="sidebar-tab" onclick="switchSidebarTab('contacts')" id="tabContacts" style="flex:1; text-align:center; padding:12px; cursor:pointer; font-weight:600; color:var(--text-3); border-top:2px solid transparent; transition:all 0.2s; font-size:12px; display:flex; flex-direction:column; align-items:center; gap:4px;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
+                <span>Contacts</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ CHAT WINDOW ══ -->
+    <div class="chat-window" id="chatWindow">
+
+        <div class="no-chat-selected" id="placeholderView">
+            <div class="empty-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+            <div class="empty-title">WhatsApp Dashboard</div>
+            <div class="empty-subtitle">Select a conversation from the left panel to start chatting.</div>
+        </div>
+
+        <div id="activeChatContent" style="display:none;flex-direction:column;height:100%;min-height:0;position:relative;overflow:hidden;">
+
+            <!-- Message Selection Bar -->
+            <div class="sel-bar" id="msgSelBar">
+                <button class="back-btn" style="display:flex;" onclick="exitMsgSelection()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+                <div class="sel-title" id="msgSelTitle">1 Selected</div>
+                <button class="sel-action" onclick="forwardSelectedMsgs()" title="Forward Messages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 10 20 15 15 20"/><path d="M4 4v7a4 4 0 0 0 4 4h12"/></svg></button>
+                <button class="sel-action" onclick="copySelectedMsgs()" title="Copy Messages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+                <button class="sel-action" onclick="deleteSelectedMsgs()" title="Delete Messages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
+            </div>
+
+            <div class="chat-header">
+                <button class="back-btn" onclick="goBackToList()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+                <div class="avatar" id="headerAvatar" style="width:40px;height:40px;font-size:14px;"></div>
+                <div class="chat-header-info" style="flex:1;min-width:0;">
+                    <div class="chat-header-name" id="currentChatPhone">—</div>
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <div class="chat-header-status"><div class="status-dot" id="currentChatStatusDot"></div><span id="currentChatStatusText">Offline</span></div>
+                        <span id="headerPhoneSubline" style="font-size:11px;color:var(--text-3);"></span>
+                    </div>
+                </div>
+                <span id="adIndicatorHeader" title="From Ad Campaign" style="display:none;width:8px;height:8px;border-radius:50%;background:#ff4444;flex-shrink:0;margin-right:6px;"></span>
+                <button onclick="fireConversion()" id="fireConversionBtn" title="Fire Conversion" style="width:36px;height:36px;background:none;border:1px solid var(--border);border-radius:50%;color:var(--text-2);cursor:pointer;display:flex;align-items:center;justify-content:center;margin-right:4px;flex-shrink:0;transition:all 0.2s;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                </button>
+                <button id="headerContactBtn" class="copy-phone-btn" style="display:flex;align-items:center;gap:6px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    <span>Save</span>
+                </button>
+            </div>
+
+            <div class="message-area" id="messageArea"></div>
+
+            <button class="scroll-bottom-btn" id="scrollBottomBtn" onclick="scrollToBottom(true)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+
+
+            <!-- Input Bar -->
+            <div class="input-area" id="inputArea">
+
+                <!-- Attachment Popup -->
+                <div class="attach-popup" id="attachPopup">
+                    <div class="ap-item" onclick="openModal('image')">
+                        <div class="ap-icon c-img"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
+                        <span class="ap-label">Image</span>
+                    </div>
+                    <div class="ap-item" onclick="openModal('video')">
+                        <div class="ap-icon c-vid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div>
+                        <span class="ap-label">Video</span>
+                    </div>
+                    <div class="ap-item" onclick="openModal('document')">
+                        <div class="ap-icon c-doc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+                        <span class="ap-label">Document</span>
+                    </div>
+                    <div class="ap-item" onclick="openModal('audio')">
+                        <div class="ap-icon c-aud"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+                        <span class="ap-label">Audio</span>
+                    </div>
+                    <div class="ap-item" onclick="openModal('interactive'); toggleInteractiveFields();">
+                        <div class="ap-icon c-int">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="16" x2="12" y2="16"/></svg>
+                        </div>
+                        <span class="ap-label">INT MSG</span>
+                    </div>
+                    <div class="ap-item" onclick="openModal('location')">
+                        <div class="ap-icon c-loc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+                        <span class="ap-label">Location</span>
+                    </div>
+                    <div class="ap-item" onclick="openModal('catalog')">
+                        <div class="ap-icon c-cat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></div>
+                        <span class="ap-label">Catalog</span>
+                    </div>
+                    <div class="ap-item" onclick="openModal('quickreply')">
+                        <div class="ap-icon c-qr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg></div>
+                        <span class="ap-label">Quick Reply</span>
+                    </div>
+                </div>
+
+                <!-- Recording Bar (shown during voice recording) -->
+                <div class="recording-bar" id="recordingBar">
+                    <button class="rec-cancel" onclick="cancelRecording()" title="Cancel">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                    <div class="rec-dot"></div>
+                    <div class="rec-wave">
+                        <div class="rec-bar"></div><div class="rec-bar"></div><div class="rec-bar"></div>
+                        <div class="rec-bar"></div><div class="rec-bar"></div><div class="rec-bar"></div>
+                        <div class="rec-bar"></div><div class="rec-bar"></div><div class="rec-bar"></div>
+                        <div class="rec-bar"></div>
+                    </div>
+                    <span class="rec-timer" id="recTimer">0:00</span>
+                    <button class="rec-send" id="recSendBtn" onclick="stopAndSendRecording()" title="Send voice note">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                    </button>
+                </div>
+
+                <!-- Create Order Button -->
+                <button class="create-order-btn" id="createOrderBtn" onclick="openChatOrderModal()" title="Create Order">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                </button>
+
+                <button class="attach-btn" id="attachBtn" onclick="toggleAttachPopup()" title="Attach">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </button>
+                
+                <!-- Autocomplete Popup -->
+                <div class="autocomplete-popup" id="autocompletePopup" style="display:none; position:absolute; bottom:100%; left:50px; background:var(--bg-header); border:1px solid var(--border); border-radius:8px; width:300px; max-height:200px; overflow-y:auto; z-index:100; box-shadow:0 -4px 12px rgba(0,0,0,0.2);">
+                    <!-- Filled by JS -->
+                </div>
+
+                <textarea id="messageInput" placeholder="Type a message…" oninput="onInputChange();this.style.height='';this.style.height=this.scrollHeight+'px'" onkeydown="handleInputKeyDown(event)" style="height:42px;"></textarea>
+
+                <!-- Send arrow: visible when typing -->
+                <button class="send-btn hidden" id="sendBtn" onclick="sendMessage()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                </button>
+
+                <!-- Mic button: visible when input is empty -->
+                <button class="mic-btn" id="micBtn" onclick="startRecording()" title="Record voice note">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                        <line x1="12" y1="19" x2="12" y2="23"/>
+                        <line x1="8" y1="23" x2="16" y2="23"/>
+                    </svg>
+                </button>
+
+                <!-- ══ FLOATING ORDER PANEL ══ (anchored inside input-area) -->
+                <div class="order-float-panel" id="orderFloatPanel">
+                    <div class="ofp-header">
+                        <div class="ofp-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></div>
+                        <div style="flex:1;min-width:0;">
+                            <div class="ofp-title">Create Order</div>
+                            <div style="font-size:10px;color:rgba(245,158,11,0.75);" id="ofp-subtitle">Customer details</div>
+                        </div>
+                        <button class="ofp-header-btn" id="ofpMinBtn" onclick="togglePanelMinimize()" title="Minimize">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                        </button>
+                        <button class="ofp-header-btn" onclick="closeChatOrderModal()" title="Close (reset form)">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        </button>
+                    </div>
+                    <div class="ofp-body">
+                        <div class="om-step-indicator">
+                            <div class="om-step"><div class="om-step-dot active" id="co-sdot-1">1</div><span class="om-step-lbl active" id="co-slbl-1">Details</span></div>
+                            <div class="om-step-line" id="co-sline-1"></div>
+                            <div class="om-step"><div class="om-step-dot inactive" id="co-sdot-2">2</div><span class="om-step-lbl inactive" id="co-slbl-2">Products</span></div>
+                            <div class="om-step-line" id="co-sline-2"></div>
+                            <div class="om-step"><div class="om-step-dot inactive" id="co-sdot-3">3</div><span class="om-step-lbl inactive" id="co-slbl-3">Review</span></div>
+                        </div>
+                        <!-- Step 1 -->
+                        <div class="om-step-content active" id="co-step-1">
+                            <div class="ofp-form-group"><label class="ofp-form-label">Customer Name</label><input type="text" class="ofp-form-input" id="co-name" placeholder="Full Name"></div>
+                            <div class="ofp-form-group"><label class="ofp-form-label">Phone</label><input type="text" class="ofp-form-input" id="co-phone" placeholder="+92…"></div>
+                            <div class="ofp-form-group"><label class="ofp-form-label">Delivery Address</label><textarea class="ofp-form-textarea" id="co-address" placeholder="Street, City…" rows="2"></textarea></div>
+                            <div style="display:flex; gap:10px;">
+                                <div class="ofp-form-group" style="flex:1;"><label class="ofp-form-label">Location Link</label><input type="text" class="ofp-form-input" id="co-location" placeholder="https://maps.google.com/…"></div>
+                                <div class="ofp-form-group" style="flex:1;"><label class="ofp-form-label">Delivery Date</label><input type="text" class="ofp-form-input" id="co-deliveryDate" placeholder="e.g. 25-Oct"></div>
+                            </div>
+                            <div class="ofp-btn-row"><button class="ofp-btn-next" onclick="goChatOrderStep(2)">Next: Products <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button></div>
+                        </div>
+                        <!-- Step 2 -->
+                        <div class="om-step-content" id="co-step-2">
+                            <div class="om-ps-grid" id="co-prod-grid"></div>
+                            <div class="ofp-btn-row">
+                                <button class="ofp-btn-back" onclick="goChatOrderStep(1)">← Back</button>
+                                <button class="ofp-btn-next" onclick="goChatOrderStep(3)">Next: Review <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>
+                            </div>
+                        </div>
+                        <!-- Step 3 -->
+                        <div class="om-step-content" id="co-step-3">
+                            <div class="om-review-sec">
+                                <h4>Customer</h4>
+                                <div class="om-review-row"><span class="r-l">Name</span><span class="r-v" id="co-rv-name">—</span></div>
+                                <div class="om-review-row"><span class="r-l">Phone</span><span class="r-v" id="co-rv-phone">—</span></div>
+                                <div class="om-review-row"><span class="r-l">Address</span><span class="r-v" id="co-rv-address">—</span></div>
+                            </div>
+                            <div class="om-review-sec">
+                                <h4>Items</h4>
+                                <div id="co-rv-items"></div>
+                                <div class="om-divider"></div>
+                                <div class="om-review-row"><span class="r-l">Subtotal</span><span class="r-v" id="co-rv-subtotal">Rs 0</span></div>
+                                <div class="om-review-row" style="align-items:center;"><span class="r-l">Delivery</span><input type="number" id="co-delivery" placeholder="0" min="0" step="1" value="0" oninput="updateCOTotal()" style="width:80px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:7px;padding:5px 8px;color:var(--text-1);font-family:inherit;font-size:12px;outline:none;text-align:right;"></div>
+                                <div class="om-divider"></div>
+                                <div class="om-total"><span>TOTAL</span><span id="co-rv-total">Rs 0</span></div>
+                            </div>
+                            <div class="ofp-btn-row">
+                                <button class="ofp-btn-back" onclick="goChatOrderStep(2)">← Back</button>
+                                <button class="ofp-btn-next" id="co-submit-btn" onclick="submitChatOrder()">✓ Create Order</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ══════════════════ IMAGE MODAL ══════════════════ -->
+<div class="modal-overlay" id="modal-image">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-icon c-img"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
+      <div><div class="modal-title">Send Image</div><div class="modal-subtitle">JPG, PNG, WebP · Max 16 MB</div></div>
+      <button class="modal-close" onclick="closeModal('image')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="form-group">
+      <div class="fdz" id="fdz-image" ondragover="onDragOver(event,'image')" ondragleave="onDragLeave('image')" ondrop="onDrop(event,'image')">
+        <input type="file" id="file-image" accept="image/jpeg,image/png,image/gif,image/webp" onchange="onFileSelect('image')">
+        <div class="fdz-icon c-img"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
+        <div class="fdz-title">Click to browse or drag & drop</div>
+        <div class="fdz-hint">JPG, PNG, GIF, WebP · Max 16 MB</div>
+      </div>
+      <div class="file-preview" id="prev-image">
+        <div class="fp-img-wrap"><img id="prev-image-thumb" src="" alt=""><button class="fp-change-btn" onclick="changeFile('image')">Change</button></div>
+        <div class="fp-info">
+          <div class="fp-type-icon c-img"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
+          <div><div class="fp-name" id="prev-image-name">—</div><div class="fp-size" id="prev-image-size"></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">Caption (optional)</label><input id="img-caption" class="form-input" placeholder="Add a caption…"></div>
+    <div class="upload-progress" id="prog-image">
+      <div class="up-label"><span>Uploading…</span><span id="prog-image-pct">0%</span></div>
+      <div class="up-bar-wrap"><div class="up-bar" id="prog-image-bar"></div></div>
+      <div class="up-status" id="prog-image-status"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-cancel" onclick="closeModal('image')">Cancel</button>
+      <button class="btn-send-modal" id="send-image-btn" onclick="sendWithUpload('image')" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>Send Image
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ VIDEO MODAL ══════════════════ -->
+<div class="modal-overlay" id="modal-video">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-icon c-vid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div>
+      <div><div class="modal-title">Send Video</div><div class="modal-subtitle">MP4, 3GP · Max 16 MB</div></div>
+      <button class="modal-close" onclick="closeModal('video')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="form-group">
+      <div class="fdz" id="fdz-video" ondragover="onDragOver(event,'video')" ondragleave="onDragLeave('video')" ondrop="onDrop(event,'video')">
+        <input type="file" id="file-video" accept="video/mp4,video/3gpp,video/quicktime" onchange="onFileSelect('video')">
+        <div class="fdz-icon c-vid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div>
+        <div class="fdz-title">Click to browse or drag & drop</div>
+        <div class="fdz-hint">MP4, 3GP · Max 16 MB</div>
+      </div>
+      <div class="file-preview" id="prev-video">
+        <div class="fp-info">
+          <div class="fp-type-icon c-vid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div>
+          <div style="flex:1"><div class="fp-name" id="prev-video-name">—</div><div class="fp-size" id="prev-video-size"></div></div>
+          <button class="fp-change" onclick="changeFile('video')">Change</button>
+        </div>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">Caption (optional)</label><input id="vid-caption" class="form-input" placeholder="Add a caption…"></div>
+    <div class="upload-progress" id="prog-video">
+      <div class="up-label"><span>Uploading…</span><span id="prog-video-pct">0%</span></div>
+      <div class="up-bar-wrap"><div class="up-bar" id="prog-video-bar"></div></div>
+      <div class="up-status" id="prog-video-status"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-cancel" onclick="closeModal('video')">Cancel</button>
+      <button class="btn-send-modal" id="send-video-btn" onclick="sendWithUpload('video')" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>Send Video
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ DOCUMENT MODAL ══════════════════ -->
+<div class="modal-overlay" id="modal-document">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-icon c-doc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+      <div><div class="modal-title">Send Document</div><div class="modal-subtitle">PDF, DOCX, XLSX, PPTX · Max 100 MB</div></div>
+      <button class="modal-close" onclick="closeModal('document')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="form-group">
+      <div class="fdz" id="fdz-document" ondragover="onDragOver(event,'document')" ondragleave="onDragLeave('document')" ondrop="onDrop(event,'document')">
+        <input type="file" id="file-document" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip" onchange="onFileSelect('document')">
+        <div class="fdz-icon c-doc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+        <div class="fdz-title">Click to browse or drag & drop</div>
+        <div class="fdz-hint">PDF, DOCX, XLSX, PPTX, TXT, ZIP · Max 100 MB</div>
+      </div>
+      <div class="file-preview" id="prev-document">
+        <div class="fp-info">
+          <div class="fp-type-icon c-doc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+          <div style="flex:1"><div class="fp-name" id="prev-document-name">—</div><div class="fp-size" id="prev-document-size"></div></div>
+          <button class="fp-change" onclick="changeFile('document')">Change</button>
+        </div>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">Caption (optional)</label><input id="doc-caption" class="form-input" placeholder="Describe this document…"></div>
+    <div class="upload-progress" id="prog-document">
+      <div class="up-label"><span>Uploading…</span><span id="prog-document-pct">0%</span></div>
+      <div class="up-bar-wrap"><div class="up-bar" id="prog-document-bar"></div></div>
+      <div class="up-status" id="prog-document-status"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-cancel" onclick="closeModal('document')">Cancel</button>
+      <button class="btn-send-modal" id="send-document-btn" onclick="sendWithUpload('document')" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>Send Document
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ AUDIO MODAL ══════════════════ -->
+<div class="modal-overlay" id="modal-audio">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-icon c-aud"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+      <div><div class="modal-title">Send Audio</div><div class="modal-subtitle">MP3, AAC, OGG, AMR · Max 16 MB</div></div>
+      <button class="modal-close" onclick="closeModal('audio')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="form-group">
+      <div class="fdz" id="fdz-audio" ondragover="onDragOver(event,'audio')" ondragleave="onDragLeave('audio')" ondrop="onDrop(event,'audio')">
+        <input type="file" id="file-audio" accept="audio/mpeg,audio/mp4,audio/ogg,audio/aac,audio/amr,audio/wav" onchange="onFileSelect('audio')">
+        <div class="fdz-icon c-aud"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+        <div class="fdz-title">Click to browse or drag & drop</div>
+        <div class="fdz-hint">MP3, AAC, OGG, AMR, WAV · Max 16 MB</div>
+      </div>
+      <div class="file-preview" id="prev-audio">
+        <div class="fp-info">
+          <div class="fp-type-icon c-aud"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+          <div style="flex:1"><div class="fp-name" id="prev-audio-name">—</div><div class="fp-size" id="prev-audio-size"></div></div>
+          <button class="fp-change" onclick="changeFile('audio')">Change</button>
+        </div>
+      </div>
+    </div>
+    <div class="upload-progress" id="prog-audio">
+      <div class="up-label"><span>Uploading…</span><span id="prog-audio-pct">0%</span></div>
+      <div class="up-bar-wrap"><div class="up-bar" id="prog-audio-bar"></div></div>
+      <div class="up-status" id="prog-audio-status"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-cancel" onclick="closeModal('audio')">Cancel</button>
+      <button class="btn-send-modal" id="send-audio-btn" onclick="sendWithUpload('audio')" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>Send Audio
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ INTERACTIVE MODAL ══════════════════ -->
+<div class="modal-overlay" id="modal-interactive">
+  <div class="modal" style="max-width:500px;">
+    <div class="modal-header">
+      <div class="modal-icon c-int"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="16" x2="12" y2="16"/></svg></div>
+      <div style="flex:1;">
+        <div class="modal-title">Interactive Message</div>
+        <div class="modal-subtitle">Send structured rich messages</div>
+      </div>
+      <button class="modal-close" onclick="closeModal('interactive')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+
+    <div class="form-row">
+        <div class="form-group" style="flex:1;">
+            <label>Message Type</label>
+            <select id="int-type" onchange="renderTemplateList()" style="width:100%;padding:10px;background:var(--bg-input);border:1px solid var(--border);color:var(--text-1);border-radius:10px;outline:none;">
+                <option value="button">Reply Buttons</option>
+                <option value="list">List Message</option>
+                <option value="product">Single Product</option>
+                <option value="product_list">Multi-Product List</option>
+                <option value="catalog_message">Catalog Message</option>
+                <option value="location_request_message">Location Request</option>
+                <option value="address_message">Address Message</option>
+                <option value="flow">WhatsApp Flow</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Template List Area -->
+    <div id="int-template-list" style="margin-bottom:15px; max-height:200px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;"></div>
+    
+    <button type="button" id="btn-create-new-template" onclick="openTemplateForm('new')" style="width:100%; padding:10px; background:rgba(255,255,255,0.05); border:1px dashed rgba(255,255,255,0.2); border-radius:10px; color:var(--text-1); cursor:pointer; margin-bottom:15px; transition:all 0.2s;">➕ Create New Button</button>
+
+    <!-- Form Wrapper -->
+    <div id="int-form-wrapper" style="display:none; border-top:1px solid rgba(255,255,255,0.1); padding-top:15px;">
+        <input type="hidden" id="int-editing-id" value="">
+
+        <!-- Common Fields -->
+        <div class="form-group" id="int-f-body">
+            <label>Body Text *</label>
+            <textarea id="int-body" placeholder="Main message text..." rows="2" class="form-textarea"></textarea>
+        </div>
+        
+        <div class="form-row" id="int-f-header-footer">
+            <div class="form-group">
+                <label>Header (optional)</label>
+                <input type="text" id="int-header" placeholder="Short title..." class="form-input">
+            </div>
+            <div class="form-group">
+                <label>Footer (optional)</label>
+                <input type="text" id="int-footer" placeholder="Small gray text..." class="form-input">
+            </div>
+        </div>
+
+        <!-- Specific Fields -->
+        <div class="form-group" id="int-f-button_text" style="display:none;">
+            <label>Menu Button Text *</label>
+            <input type="text" id="int-button_text" placeholder="e.g. View Options" class="form-input">
+        </div>
+
+        <div class="form-group" id="int-f-sections" style="display:none;">
+            <label>Sections Data (JSON Array) *</label>
+            <textarea id="int-sections" placeholder='[{"title":"Section","rows":[{"id":"row1","title":"Item"}]}]' rows="4" class="form-textarea" style="font-family:monospace;font-size:12px;"></textarea>
+            <div class="input-hint" style="font-size:10px;color:gray;margin-top:2px;">For lists & multi-product. Must be valid JSON.</div>
+        </div>
+
+        <div class="form-row" id="int-f-buttons" style="display:none;">
+            <div class="form-group"><label>Button 1 *</label><input type="text" id="int-btn1" placeholder="Title" class="form-input"></div>
+            <div class="form-group"><label>Button 2</label><input type="text" id="int-btn2" placeholder="Title" class="form-input"></div>
+            <div class="form-group"><label>Button 3</label><input type="text" id="int-btn3" placeholder="Title" class="form-input"></div>
+        </div>
+
+        <div class="form-row" id="int-f-catalog" style="display:none;">
+            <div class="form-group"><label>Catalog ID *</label><input type="text" id="int-catalog_id" class="form-input"></div>
+            <div class="form-group"><label>Product SKU/ID</label><input type="text" id="int-product_id" placeholder="(Req for Single Product)" class="form-input"></div>
+        </div>
+
+        <div class="form-row" id="int-f-address" style="display:none;">
+            <div class="form-group"><label>Country Code *</label><input type="text" id="int-country_code" placeholder="IN, SG" maxlength="2" class="form-input"></div>
+        </div>
+
+        <div class="form-row" id="int-f-flow1" style="display:none;">
+            <div class="form-group"><label>Flow ID *</label><input type="text" id="int-flow_id" class="form-input"></div>
+            <div class="form-group"><label>CTA Button Text *</label><input type="text" id="int-flow_cta" placeholder="Open App" class="form-input"></div>
+        </div>
+        <div class="form-row" id="int-f-flow2" style="display:none;">
+            <div class="form-group"><label>Initial Screen</label><input type="text" id="int-flow_screen" placeholder="e.g. WELCOME_SCREEN" class="form-input"></div>
+            <div class="form-group"><label>Flow Token</label><input type="text" id="int-flow_token" placeholder="Optional tracking string" class="form-input"></div>
+        </div>
+
+        <div class="btn-row" style="margin-top:20px;">
+          <button type="button" class="btn-cancel" onclick="closeTemplateForm()">Cancel</button>
+          <button type="button" class="btn-cancel" onclick="saveInteractiveTemplate()" style="background:#1976d2;color:white;border:none;">Save</button>
+          <button type="button" class="btn-send-modal" id="send-interactive-btn" onclick="sendInteractiveMsg()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>Send
+          </button>
+        </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ LOCATION MODAL ══════════════════ -->
+<div class="modal-overlay" id="modal-location">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-icon c-loc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+      <div><div class="modal-title">Send Location</div><div class="modal-subtitle">Share a map pin with coordinates</div></div>
+      <button class="modal-close" onclick="closeModal('location')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="form-row">
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Latitude *</label><input id="loc-lat" class="form-input" placeholder="24.8607" type="number" step="any"></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Longitude *</label><input id="loc-lng" class="form-input" placeholder="67.0011" type="number" step="any"></div>
+    </div>
+    <div class="form-group" style="margin-top:14px"><label class="form-label">Place Name (optional)</label><input id="loc-name" class="form-input" placeholder="e.g. Jasper's Market"></div>
+    <div class="form-group"><label class="form-label">Address (optional)</label><input id="loc-address" class="form-input" placeholder="e.g. 123 Main St, Karachi"></div>
+    <div class="btn-row">
+      <button class="btn-cancel" onclick="closeModal('location')">Cancel</button>
+      <button class="btn-send-modal" onclick="sendLocation()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>Send Location
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ CATALOG MODAL ══════════════════ -->
+<div class="modal-overlay" id="modal-catalog">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-icon c-cat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></div>
+      <div><div class="modal-title">Send Catalog</div><div class="modal-subtitle">WhatsApp Business product catalog</div></div>
+      <button class="modal-close" onclick="closeModal('catalog')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="form-group"><label class="form-label">Message Body</label><input id="cat-body" class="form-input" value="Browse our catalog below 🛍️"></div>
+    <div class="form-group"><label class="form-label">Thumbnail Product Retailer ID (optional)</label><input id="cat-thumb" class="form-input" placeholder="Leave blank for default"></div>
+    <div class="btn-row">
+      <button class="btn-cancel" onclick="closeModal('catalog')">Cancel</button>
+      <button class="btn-send-modal" onclick="sendCatalog()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>Send Catalog
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ TEMPLATE MANAGER MODAL ══════════════════ -->
+<div class="modal-overlay" id="modal-quickreply">
+  <div class="modal" style="max-width:600px;">
+    <div class="modal-header">
+      <div class="modal-icon c-qr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg></div>
+      <div><div class="modal-title">Quick Reply Templates</div><div class="modal-subtitle">Manage your saved templates and shortcuts</div></div>
+      <button class="modal-close" onclick="closeModal('quickreply')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    
+    <div style="display:flex; gap:16px; margin-bottom:16px;">
+        <div style="flex:1;">
+            <div class="form-group"><label class="form-label">Shortcut *</label><input type="text" id="tpl-shortcut" class="form-input" placeholder="e.g. /hello"></div>
+            <div class="form-group"><label class="form-label">Title</label><input type="text" id="tpl-title" class="form-input" placeholder="e.g. Greeting"></div>
+        </div>
+        <div style="flex:2;">
+            <div class="form-group"><label class="form-label">Message Body *</label><textarea id="tpl-body" class="form-textarea" placeholder="Type the template message here..." style="height:115px;"></textarea></div>
+        </div>
+    </div>
+    <div class="btn-row" style="margin-bottom:24px; border-bottom:1px solid var(--border); padding-bottom:16px;">
+        <button class="btn-cancel" onclick="clearTemplateForm()">Clear</button>
+        <button class="btn-send-modal" onclick="saveTemplate()" style="background:var(--green); color:white; border:none; padding:8px 16px; border-radius:8px;">Save Template</button>
+        <input type="hidden" id="tpl-id">
+    </div>
+
+    <div class="form-label" style="margin-bottom:10px;">Saved Templates</div>
+    <div id="templateList" style="max-height:250px; overflow-y:auto; border:1px solid var(--border); border-radius:8px; padding:8px;">
+        <!-- Filled by JS -->
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════════════ -->
+<!-- Add Contact Modal -->
+<div id="addContactModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:9999; align-items:center; justify-content:center;">
+    <div style="background:var(--bg-sidebar); padding:24px; border-radius:12px; width:90%; max-width:400px; border:1px solid var(--border); box-shadow:0 8px 32px rgba(0,0,0,0.5);">
+        <h3 style="margin-top:0; color:var(--text-1);">Add Contact</h3>
+        <input type="text" id="addContactName" placeholder="Name" style="width:100%; padding:10px; margin-bottom:12px; border-radius:6px; border:1px solid var(--border); background:var(--bg-input); color:var(--text-1); outline:none;">
+        <input type="text" id="addContactPhone" placeholder="Phone (e.g. +1234567890)" style="width:100%; padding:10px; margin-bottom:16px; border-radius:6px; border:1px solid var(--border); background:var(--bg-input); color:var(--text-1); outline:none;">
+        <div style="display:flex; gap:12px; justify-content:flex-end;">
+            <button onclick="document.getElementById('addContactModal').style.display='none'" style="padding:8px 16px; border-radius:6px; border:none; background:var(--bg-input); color:var(--text-1); cursor:pointer;">Cancel</button>
+            <button onclick="submitAddContact()" style="padding:8px 16px; border-radius:6px; border:none; background:var(--primary, var(--green)); color:white; cursor:pointer;">Add</button>
+        </div>
+    </div>
+</div>
+
+<!-- New Message Modal -->
+<div id="newMessageModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:9999; align-items:center; justify-content:center;">
+    <div style="background:var(--bg-sidebar); padding:24px; border-radius:12px; width:90%; max-width:400px; border:1px solid var(--border); box-shadow:0 8px 32px rgba(0,0,0,0.5);">
+        <h3 style="margin-top:0; color:var(--text-1);">New Message</h3>
+        <p style="font-size:13px; color:var(--text-3); margin-bottom:12px;">Enter a phone number to start a conversation.</p>
+        <input type="text" id="newMessagePhone" placeholder="Phone (e.g. +1234567890)" style="width:100%; padding:10px; margin-bottom:16px; border-radius:6px; border:1px solid var(--border); background:var(--bg-input); color:var(--text-1); outline:none;">
+        <div style="display:flex; gap:12px; justify-content:flex-end;">
+            <button onclick="document.getElementById('newMessageModal').style.display='none'" style="padding:8px 16px; border-radius:6px; border:none; background:var(--bg-input); color:var(--text-1); cursor:pointer;">Cancel</button>
+            <button onclick="submitNewMessage()" style="padding:8px 16px; border-radius:6px; border:none; background:var(--primary, var(--green)); color:white; cursor:pointer;">Start Chat</button>
+        </div>
+    </div>
+</div>
+
+<!-- Forward Modal -->
+<div id="modal-forward" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:9999; align-items:center; justify-content:center;">
+    <div style="background:var(--bg-sidebar); padding:24px; border-radius:12px; width:90%; max-width:400px; border:1px solid var(--border); box-shadow:0 8px 32px rgba(0,0,0,0.5); display:flex; flex-direction:column; max-height:80vh;">
+        <h3 style="margin-top:0; color:var(--text-1);">Forward Messages</h3>
+        <p style="font-size:13px; color:var(--text-3); margin-bottom:12px;">Select contacts or chats to forward to.</p>
+        <div id="forward-list" style="overflow-y:auto; flex:1; margin-bottom:16px; border:1px solid var(--border); border-radius:6px; background:var(--bg-input);">
+            <!-- Populated via JS -->
+        </div>
+        <div style="display:flex; gap:12px; justify-content:flex-end;">
+            <button onclick="document.getElementById('modal-forward').style.display='none'" style="padding:8px 16px; border-radius:6px; border:none; background:var(--bg-input); color:var(--text-1); cursor:pointer;">Cancel</button>
+            <button id="btn-submit-forward" onclick="submitForward()" style="padding:8px 16px; border-radius:6px; border:none; background:var(--primary, var(--green)); color:white; cursor:pointer;" disabled>Forward</button>
+        </div>
+    </div>
+</div>
+
+<script>
+'use strict';
+
+// ── STATE ──────────────────────────────────────────────────────
+let activePhone      = null;
+let lastMessageCount = 0;
+let allChats         = [];
+let allContacts      = [];
+
+// Normalize any phone format to a comparable local suffix (last 10 digits)
+function normalizePhone(phone) {
+    let p = String(phone || '').replace(/\D/g, '');
+    // Strip leading country code variants: 0092, 92, +92 → strip to 10 digits
+    if (p.startsWith('0092')) p = p.slice(4);
+    else if (p.startsWith('92') && p.length > 11) p = p.slice(2);
+    else if (p.startsWith('0') && p.length === 11) p = p.slice(1);
+    return p; // returns last 10 digits (local format)
+}
+
+function getContactName(phone) {
+    if (!allContacts || !phone) return null;
+    const np = normalizePhone(phone);
+    const c = allContacts.find(x => normalizePhone(x.phone) === np);
+    return c ? c.name : null;
+}
+
+function getContactObj(phone) {
+    if (!allContacts || !phone) return null;
+    const np = normalizePhone(phone);
+    return allContacts.find(x => normalizePhone(x.phone) === np) || null;
+}
+
+// ... 
+
+// Removed duplicate loadChats and renderChatList
+// Per-type: store selected File object
+const selectedFiles  = {image:null,video:null,document:null,audio:null,sticker:null};
+
+const appContainer = document.getElementById('appContainer');
+const messageArea  = document.getElementById('messageArea');
+const scrollBtn    = document.getElementById('scrollBottomBtn');
+const attachPopup  = document.getElementById('attachPopup');
+const attachBtn    = document.getElementById('attachBtn');
+
+// ── AVATAR ────────────────────────────────────────────────────
+const AVC = [['#1a4a3a','#00a884'],['#1e2d5a','#4a80f5'],['#4a1a2a','#e05c8a'],['#3a2a10','#e08040'],['#1a1a4a','#8060e0'],['#0d3d2d','#40c090'],['#3a1010','#e05040'],['#103a3a','#40b0b0']];
+function avatarStyle(str){
+    let s = String(str || '');
+    let h=0;for(let c of s)h=(h*31+c.charCodeAt(0))&0xffffffff;
+    const [bg,fg]=AVC[Math.abs(h)%AVC.length];
+    let initials = '??';
+    if(s && s.replace(/\D/g, '').length === s.length - (s.startsWith('+')?1:0)) {
+        initials = s.replace(/\D/g,'').slice(-2) || '??';
+    } else if(s) {
+        const parts = s.trim().split(/\s+/);
+        if(parts.length >= 2 && parts[0] && parts[1]) initials = (parts[0][0] + parts[1][0]).toUpperCase();
+        else initials = s.slice(0, 2).toUpperCase();
+    }
+    return {bg, fg, initials};
+}
+function setHeaderAvatar(p){const{bg,fg,initials}=avatarStyle(p);const el=document.getElementById('headerAvatar');el.style.background=bg;el.style.color=fg;el.textContent=initials;}
+
+// ── TIME ──────────────────────────────────────────────────────
+function relTime(ts){if(!ts||ts==='now')return'';try{let d=new Date(ts);if(isNaN(d)&&!isNaN(Number(ts)))d=new Date(Number(ts)*1000);if(isNaN(d))return'';const diff=(Date.now()-d)/1000;if(diff<60)return'just now';if(diff<3600)return Math.floor(diff/60)+'m';if(diff<86400)return Math.floor(diff/3600)+'h';return d.toLocaleDateString([],{month:'short',day:'numeric'});}catch{return'';}}
+function fmtTime(ts){if(!ts||ts==='now')return new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});try{let d=new Date(ts);if(isNaN(d)&&!isNaN(Number(ts)))d=new Date(Number(ts)*1000);if(isNaN(d))return'';return d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});}catch{return'';}}
+function fmtBytes(b){if(b<1024)return b+' B';if(b<1048576)return(b/1024).toFixed(1)+' KB';return(b/1048576).toFixed(1)+' MB';}
+
+// ── UTILS ─────────────────────────────────────────────────────
+function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function linkify(s){return s.replace(/(https?:\/\/[^\s]+)/g,'<a href="$1" target="_blank" style="color:#66b3ff;text-decoration:underline;word-break:break-all;">$1</a>');}
+function showToast(msg,dur=2600){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),dur);}
+function copyPhone(){if(!activePhone)return;navigator.clipboard.writeText(activePhone).then(()=>showToast('📋 Phone number copied!'));}
+
+// ── SCROLL ────────────────────────────────────────────────────
+function scrollToBottom(s=false){messageArea.scrollTo({top:messageArea.scrollHeight,behavior:s?'smooth':'auto'});}
+messageArea.addEventListener('scroll',()=>{scrollBtn.classList.toggle('visible',(messageArea.scrollHeight-messageArea.scrollTop-messageArea.clientHeight)>120);});
+
+// ── ATTACH POPUP ──────────────────────────────────────────────
+function toggleAttachPopup(){const o=attachPopup.classList.toggle('visible');attachBtn.classList.toggle('open',o);}
+document.addEventListener('click',e=>{if(!attachBtn.contains(e.target)&&!attachPopup.contains(e.target)){attachPopup.classList.remove('visible');attachBtn.classList.remove('open');}});
+
+// ── MODALS ────────────────────────────────────────────────────
+function openModal(t){attachPopup.classList.remove('visible');attachBtn.classList.remove('open');document.getElementById('modal-'+t).classList.add('active');}
+function closeModal(t){document.getElementById('modal-'+t).classList.remove('active');}
+document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('active');}));
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modal-overlay.active').forEach(o=>o.classList.remove('active'));});
+
+// ── FILE DROP ZONE ────────────────────────────────────────────
+function onDragOver(e,type){e.preventDefault();document.getElementById('fdz-'+type).classList.add('drag-over');}
+function onDragLeave(type){document.getElementById('fdz-'+type).classList.remove('drag-over');}
+function onDrop(e,type){e.preventDefault();onDragLeave(type);const file=e.dataTransfer.files[0];if(file){const inp=document.getElementById('file-'+type);const dt=new DataTransfer();dt.items.add(file);inp.files=dt.files;onFileSelect(type);}}
+function changeFile(type){document.getElementById('file-'+type).click();}
+
+function onFileSelect(type){
+    const inp=document.getElementById('file-'+type);
+    if(!inp.files||!inp.files[0])return;
+    const file=inp.files[0];
+    selectedFiles[type]=file;
+
+    // Hide drop zone, show preview
+    document.getElementById('fdz-'+type).style.display='none';
+    const prev=document.getElementById('prev-'+type);
+    prev.classList.add('visible');
+
+    // Fill in name + size
+    const nameEl=document.getElementById('prev-'+type+'-name');
+    const sizeEl=document.getElementById('prev-'+type+'-size');
+    if(nameEl) nameEl.textContent=file.name;
+    if(sizeEl) sizeEl.textContent=fmtBytes(file.size);
+
+    // Image/sticker: show thumbnail
+    if(type==='image'||type==='sticker'){
+        const thumb=document.getElementById('prev-'+type+'-thumb');
+        if(thumb){const reader=new FileReader();reader.onload=e=>thumb.src=e.target.result;reader.readAsDataURL(file);}
+    }
+
+    // Enable send button
+    document.getElementById('send-'+type+'-btn').disabled=false;
+
+    // Reset progress
+    resetProgress(type);
+}
+
+function resetProgress(type){
+    const p=document.getElementById('prog-'+type);
+    if(!p)return;
+    p.classList.remove('visible');
+    document.getElementById('prog-'+type+'-bar').style.width='0%';
+    document.getElementById('prog-'+type+'-pct').textContent='0%';
+    document.getElementById('prog-'+type+'-status').textContent='';
+}
+
+// ── UPLOAD + SEND (2-step for file types) ────────────────────
+async function sendWithUpload(type){
+    if(!activePhone){showToast('⚠️ Select a conversation first');return;}
+    const file=selectedFiles[type];
+    if(!file){showToast('⚠️ Please select a file first');return;}
+
+    const sendBtn=document.getElementById('send-'+type+'-btn');
+    sendBtn.disabled=true;
+    sendBtn.innerHTML=`<svg style="animation:spin .8s linear infinite;width:15px;height:15px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Uploading…`;
+
+    // Show progress bar
+    const prog=document.getElementById('prog-'+type);
+    prog.classList.add('visible');
+    const bar=document.getElementById('prog-'+type+'-bar');
+    const pct=document.getElementById('prog-'+type+'-pct');
+    const stat=document.getElementById('prog-'+type+'-status');
+
+    // ── STEP 1: Upload to Meta via XHR (so we can track progress) ──
+    let media_id, local_url;
+    try {
+        const fd=new FormData();
+        fd.append('file',file,file.name);
+
+        const uploadData = await new Promise((resolve,reject)=>{
+            const xhr=new XMLHttpRequest();
+            xhr.open('POST','/api/upload_media');
+            xhr.upload.onprogress=e=>{
+                if(e.lengthComputable){
+                    const p=Math.round(e.loaded/e.total*90); // 90% for upload, 10% for send
+                    bar.style.width=p+'%';
+                    pct.textContent=p+'%';
+                }
+            };
+            xhr.onload=()=>{
+                const data=JSON.parse(xhr.responseText);
+                if(data.error){reject(new Error(data.error));}
+                else{resolve(data);}
+            };
+            xhr.onerror=()=>reject(new Error('Network error during upload'));
+            xhr.send(fd);
+        });
+        media_id = uploadData.media_id;
+        local_url = uploadData.local_url;
+    } catch(e) {
+        showToast('⚠️ Upload failed: '+e.message, 3500);
+        stat.textContent='❌ Upload failed: '+e.message;
+        sendBtn.disabled=false;
+        sendBtn.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:15px;height:15px" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Send`;
+        return;
+    }
+
+    // ── STEP 2: Send the message using the media_id ──
+    bar.style.width='95%'; pct.textContent='95%'; stat.textContent='Sending…';
+
+    const endpointMap={image:'/api/send_image',video:'/api/send_video',document:'/api/send_document',audio:'/api/send_audio',sticker:'/api/send_sticker'};
+    const body={phone:activePhone,media_id,local_url};
+
+    // Extra fields per type
+    if(type==='image')    body.caption = (document.getElementById('img-caption')||{}).value||'';
+    if(type==='video')    body.caption = (document.getElementById('vid-caption')||{}).value||'';
+    if(type==='document'){body.caption = (document.getElementById('doc-caption')||{}).value||'';body.filename=file.name;}
+    if(type==='audio')    {} // no extra
+    if(type==='sticker')  {} // no extra
+
+    try {
+        const res=await fetch(endpointMap[type],{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+        const data=await res.json();
+        if(data.error){
+            stat.textContent='❌ Send failed: '+data.error;
+            showToast('⚠️ Send failed: '+data.error,3500);
+        } else {
+            bar.style.width='100%'; pct.textContent='100%'; stat.textContent='✅ Sent!';
+            showToast('✅ '+type.charAt(0).toUpperCase()+type.slice(1)+' sent!');
+            // Reset modal after a short delay
+            setTimeout(()=>{closeModal(type);resetModalState(type);},800);
+            loadMessages(); loadChats();
+        }
+    } catch(e) {
+        stat.textContent='❌ Network error';
+        showToast('⚠️ Network error while sending');
+    } finally {
+        sendBtn.disabled=false;
+        const lbl=type.charAt(0).toUpperCase()+type.slice(1);
+        sendBtn.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:15px;height:15px" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Send ${lbl}`;
+    }
+}
+
+function resetModalState(type){
+    selectedFiles[type]=null;
+    const fdz=document.getElementById('fdz-'+type);
+    if(fdz) fdz.style.display='';
+    const prev=document.getElementById('prev-'+type);
+    if(prev) prev.classList.remove('visible');
+    const inp=document.getElementById('file-'+type);
+    if(inp) inp.value='';
+    const sb=document.getElementById('send-'+type+'-btn');
+    if(sb) sb.disabled=true;
+    resetProgress(type);
+    // Clear captions
+    const cap=document.getElementById(type.substring(0,3)+'-caption');
+    if(cap) cap.value='';
+}
+
+// ── LOCATION ──────────────────────────────────────────────────
+async function sendLocation(){
+    if(!activePhone){showToast('⚠️ Select a conversation first');return;}
+    const lat=document.getElementById('loc-lat').value.trim();
+    const lng=document.getElementById('loc-lng').value.trim();
+    if(!lat||!lng){showToast('⚠️ Latitude and Longitude are required');return;}
+    await simpleSend('/api/send_location',{phone:activePhone,latitude:parseFloat(lat),longitude:parseFloat(lng),name:document.getElementById('loc-name').value.trim(),address:document.getElementById('loc-address').value.trim()},'location','📍 Location sent!');
+}
+
+// ── CATALOG ───────────────────────────────────────────────────
+async function sendCatalog(){
+    if(!activePhone){showToast('⚠️ Select a conversation first');return;}
+    const body={phone:activePhone,body:document.getElementById('cat-body').value.trim()};
+    const th=document.getElementById('cat-thumb').value.trim();
+    if(th) body.thumbnail_product_id=th;
+    await simpleSend('/api/send_catalog',body,'catalog','🛍️ Catalog sent!');
+}
+
+// ── TEMPLATE MANAGER ──────────────────────────────────────────────
+let savedTemplates = [];
+
+async function loadTemplates() {
+    try {
+        const r = await fetch('/api/quick_replies');
+        savedTemplates = await r.json();
+        renderTemplateList();
+    } catch (e) {
+        console.error("Failed to load templates", e);
+    }
+}
+
+function renderTemplateList() {
+    const list = document.getElementById('templateList');
+    if (!list) return;
+    if (savedTemplates.length === 0) {
+        list.innerHTML = `<div style="text-align:center; padding:10px; color:var(--text-3); font-size:12px;">No templates saved yet. Create one above!</div>`;
+        return;
+    }
+    list.innerHTML = savedTemplates.map(t => `
+        <div class="tpl-item">
+            <div style="flex:1; overflow:hidden;">
+                <div class="ac-shortcut">${t.shortcut} <span style="color:var(--text-3);font-weight:400;font-size:11px;">${t.title||''}</span></div>
+                <div class="ac-body">${t.body}</div>
+            </div>
+            <div class="tpl-actions">
+                <button onclick="editTemplate(${t.id})" title="Edit"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+                <button onclick="deleteTemplate(${t.id})" title="Delete"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function clearTemplateForm() {
+    document.getElementById('tpl-id').value = '';
+    document.getElementById('tpl-shortcut').value = '';
+    document.getElementById('tpl-title').value = '';
+    document.getElementById('tpl-body').value = '';
+}
+
+function editTemplate(id) {
+    const t = savedTemplates.find(x => x.id === id);
+    if (!t) return;
+    document.getElementById('tpl-id').value = t.id;
+    document.getElementById('tpl-shortcut').value = t.shortcut;
+    document.getElementById('tpl-title').value = t.title || '';
+    document.getElementById('tpl-body').value = t.body;
+}
+
+async function deleteTemplate(id) {
+    if (!confirm('Delete this template?')) return;
+    try {
+        await fetch('/api/quick_replies/' + id, { method: 'DELETE' });
+        await loadTemplates();
+        showToast('🗑️ Template deleted');
+    } catch(e) { console.error(e); }
+}
+
+async function saveTemplate() {
+    let shortcut = document.getElementById('tpl-shortcut').value.trim();
+    const title = document.getElementById('tpl-title').value.trim();
+    const body = document.getElementById('tpl-body').value.trim();
+    const id = document.getElementById('tpl-id').value;
+
+    if (!shortcut || !body) { showToast('⚠️ Shortcut and Body are required'); return; }
+    if (!shortcut.startsWith('/')) { shortcut = '/' + shortcut; }
+
+    try {
+        const payload = { shortcut, title, body };
+        if (id) {
+            await fetch('/api/quick_replies/' + id, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+        } else {
+            await fetch('/api/quick_replies', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+        }
+        clearTemplateForm();
+        await loadTemplates();
+        showToast('✅ Template saved');
+    } catch(e) { console.error(e); showToast('⚠️ Error saving template'); }
+}
+
+// ── GENERIC SIMPLE SEND (no upload) ──────────────────────────
+async function simpleSend(endpoint,body,modalType,successMsg){
+    try{
+        const res=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+        const data=await res.json();
+        if(data.error){showToast('⚠️ '+data.error,3500);}
+        else{showToast(successMsg);closeModal(modalType);loadMessages();loadChats();}
+    }catch(e){showToast('⚠️ Network error');console.error(e);}
+}
+
+// ── QUICK ACTIONS (menu / order booking) ─────────────────────
+async function qaAction(action){
+    if(!activePhone){showToast('⚠️ Select a conversation first');return;}
+    const id=action==='menu'?'qaMenuBtn':'qaOrderBtn';
+    const ep=action==='menu'?'/api/send_menu':'/api/send_order_booking';
+    const btn=document.getElementById(id);
+    btn.classList.add('loading');
+    try{
+        const res=await fetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:activePhone})});
+        const data=await res.json();
+        if(data.error){showToast('⚠️ '+data.error,3000);}
+        else{btn.classList.add('success');showToast('✅ Sent!');loadMessages();loadChats();}
+    }catch(e){showToast('⚠️ Network error');}
+    finally{btn.classList.remove('loading');setTimeout(()=>btn.classList.remove('success'),2000);}
+}
+
+let unreadCounts = {};
+
+function playNotificationSound() {
+    try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(1760, audioCtx.currentTime + 0.1);
+        gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+        oscillator.start(audioCtx.currentTime);
+        oscillator.stop(audioCtx.currentTime + 0.3);
+    } catch(e) { console.log("Audio play blocked", e); }
+}
+
+function showNotification(title, body) {
+    if ("Notification" in window && window.Notification.permission === 'granted') {
+        new window.Notification(title, { body: body, icon: '/static/icons/icon-192x192.png' });
+    }
+}
+
+async function loadChats(){
+    try{
+        const r=await fetch('/api/chats');
+        const newChats=await r.json();
+        
+        let playSound = false;
+        newChats.forEach(c => {
+            const prev = unreadCounts[c.phone] || 0;
+            // Trigger if unread count increases, and it's not the currently active chat
+            if (c.unread_count > prev && c.phone !== activePhone) {
+                playSound = true;
+                const cName = getContactName(c.phone) || c.phone;
+                showNotification("New Message from " + cName, c.last_message || "You have a new message.");
+            }
+            // Update the cache
+            unreadCounts[c.phone] = c.unread_count || 0;
+        });
+        if (playSound) playNotificationSound();
+        
+        allChats = newChats;
+        filterChats(document.getElementById('searchInput').value);
+        if (activePhone) {
+            const cName = getContactName(activePhone);
+            const displayName = cName ? cName : activePhone;
+            const headerEl = document.getElementById('currentChatPhone');
+            if(headerEl) headerEl.innerText = displayName;
+            setHeaderAvatar(displayName);
+            updateHeaderContactBtn(activePhone);
+        }
+    }
+    catch(e){console.error('loadChats:',e);}
+}
+
+function renderChatList(chats){
+    const el=document.getElementById('chatList');
+    if(!chats||!chats.length){el.innerHTML='<div class="sidebar-empty"><p>No conversations yet.<br>Messages will appear here.</p></div>';return;}
+    el.innerHTML=chats.map(c=>{
+        const cName = getContactName(c.phone);
+        const displayName = cName ? cName : c.phone;
+        const {bg,fg,initials} = avatarStyle(displayName);
+        const a = c.phone===activePhone ? 'active' : '';
+        const fired = c.lead_status === 'sent';
+        const firedStyle = fired ? 'background:rgba(0,168,132,0.10);border-left:3px solid var(--green);' : '';
+        const adDot = c.has_click_id ? `<span title="From Ad Campaign" style="width:7px;height:7px;border-radius:50%;background:#ff4444;flex-shrink:0;display:inline-block;margin-left:4px;"></span>` : '';
+        
+        const orderTagMap = {new:'New', packed:'Pkg', delivered:'Dlv', complete:'Cmp'};
+        const tagText = c.order_status ? orderTagMap[c.order_status] : '';
+        const orderBadgeHtml = tagText ? `<span class="chat-order-badge ${c.order_status}">${tagText}</span>` : '';
+        
+        const isSelected = selectedChats.includes(c.phone);
+        const selClass = isSelected ? 'selected' : '';
+        const unreadBadge = c.unread_count > 0 ? `<div style="background:var(--green);color:white;font-size:11px;font-weight:700;border-radius:10px;padding:2px 7px;margin-left:auto;flex-shrink:0;">${c.unread_count}</div>` : '';
+        
+        return `<div class="chat-item ${a} ${selClass}" 
+            onclick="chatClickWrap(event, '${esc(c.phone)}')" 
+            oncontextmenu="onChatContext(event, '${esc(c.phone)}')"
+            style="${firedStyle}">
+            <div class="avatar" style="width:46px;height:46px;font-size:16px;background:${bg};color:${fg};">${initials}</div>
+            <div class="chat-item-body">
+                <div class="chat-item-top">
+                    <div class="phone-num">${esc(displayName)}${fired ? ' <span style="color:var(--green);font-size:11px;">✓</span>' : ''}${adDot}${orderBadgeHtml}</div>
+                    ${c.timestamp?`<div class="chat-time">${relTime(c.timestamp)}</div>`:''}
+                </div>
+                <div style="display:flex;align-items:center;">
+                    <div class="preview-txt">${esc(c.last_message||'')}</div>
+                    ${unreadBadge}
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+let currentChatFilter = 'all';
+
+function setChatFilter(filter) {
+    currentChatFilter = filter;
+    document.querySelectorAll('.chat-filter-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById('cf-' + filter).classList.add('active');
+    filterSidebar(document.getElementById('searchInput').value);
+}
+
+function filterChats(q) {
+    q = q.trim().toLowerCase();
+    
+    // Apply both search query and status filter
+    let filtered = allChats;
+    
+    if (currentChatFilter !== 'all') {
+        filtered = filtered.filter(c => c.order_status === currentChatFilter);
+    }
+    
+    if (q) {
+        filtered = filtered.filter(c => c.phone.toLowerCase().includes(q));
+    }
+    
+    renderChatList(filtered);
+}
+
+// ── CHAT SELECTION ────────────────────────────────────────────
+function updateChatHeaderStatus(chat) {
+    const dot = document.getElementById('currentChatStatusDot');
+    const txt = document.getElementById('currentChatStatusText');
+    if (!chat || !chat.last_inbound) {
+        dot.style.background = 'var(--text-3)';
+        txt.textContent = 'Offline';
+        return;
+    }
+    const ts = parseInt(chat.last_inbound);
+    if (isNaN(ts)) {
+        dot.style.background = 'var(--text-3)';
+        txt.textContent = 'Offline';
+        return;
+    }
+    const diffMins = (Date.now() - (ts * 1000)) / 60000;
+    if (diffMins < 15) {
+        dot.style.background = 'var(--green)';
+        txt.textContent = 'Online';
+    } else {
+        dot.style.background = 'var(--text-3)';
+        txt.textContent = 'Last seen ' + relTime(ts * 1000);
+    }
+}
+
+function updateHeaderContactBtn(phone) {
+    const contactObj = getContactObj(phone);
+    const btn = document.getElementById('headerContactBtn');
+    if (!btn) return;
+    if (contactObj) {
+        btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg><span>Edit</span>`;
+        btn.onclick = () => editContact(contactObj.id, contactObj.name, contactObj.phone, null);
+        btn.style.borderColor = 'var(--green)';
+        btn.style.color = 'var(--green)';
+    } else {
+        btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><line x1="12" y1="3" x2="12" y2="11"/><line x1="8" y1="7" x2="16" y2="7"/></svg><span>Save</span>`;
+        btn.onclick = () => openAddContactModalWithPhone(phone);
+        btn.style.borderColor = 'var(--text-3)';
+        btn.style.color = 'var(--text-2)';
+    }
+}
+
+function selectChat(phone){
+    activePhone=phone;
+    lastMessageCount=0;
+    document.getElementById('placeholderView').style.display='none';
+    document.getElementById('activeChatContent').style.display='flex';
+    const cName = getContactName(phone);
+    const displayName = cName ? cName : phone;
+    document.getElementById('currentChatPhone').innerText = displayName;
+    setHeaderAvatar(displayName);
+
+    // Show phone number under name when a contact name is resolved
+    const sublineEl = document.getElementById('headerPhoneSubline');
+    if (sublineEl) { sublineEl.textContent = cName ? phone : ''; }
+
+    updateHeaderContactBtn(phone);
+    const chatObj = allChats ? allChats.find(c => c.phone === phone) : null;
+    updateChatHeaderStatus(chatObj);
+
+    // Ad indicator in header
+    const adEl = document.getElementById('adIndicatorHeader');
+    if (adEl) { adEl.style.display = (chatObj && chatObj.has_click_id) ? 'inline-block' : 'none'; }
+
+    // Fire button state (icon-only, no span)
+    const fireBtn = document.getElementById('fireConversionBtn');
+    if (chatObj && chatObj.lead_status === 'sent') {
+        fireBtn.style.color = 'var(--green)';
+        fireBtn.style.borderColor = 'var(--green)';
+        fireBtn.style.background = 'rgba(0,168,132,0.12)';
+        fireBtn.disabled = true;
+        fireBtn.title = 'Conversion already fired';
+    } else {
+        fireBtn.style.color = 'var(--text-2)';
+        fireBtn.style.borderColor = 'var(--border)';
+        fireBtn.style.background = 'none';
+        fireBtn.disabled = false;
+        fireBtn.title = 'Fire Conversion';
+    }
+
+    appContainer.classList.add('show-chat');
+    loadMessages();
+    loadChats();
+}
+
+function goBackToList(){appContainer.classList.remove('show-chat');activePhone=null;}
+
+// ── LOAD MESSAGES ─────────────────────────────────────────────
+async function loadMessages(){
+    if(!activePhone)return;
+    try{
+        const r=await fetch(`/api/messages/${activePhone}`);
+        const msgs=await r.json();
+        if(msgs.length===lastMessageCount)return;
+        const atBottom=(messageArea.scrollHeight-messageArea.scrollTop-messageArea.clientHeight)<80;
+        messageArea.innerHTML='';
+        let lastDate=null;
+        const getTickHTML = (status) => {
+            if (!status || status === 'sent') return `<span class="msg-tick" style="color:var(--text-3);"><svg viewBox="0 0 16 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:10px"><polyline points="4 6 7 9 13 2"/></svg></span>`;
+            if (status === 'delivered') return `<span class="msg-tick" style="color:var(--text-3);"><svg viewBox="0 0 16 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:10px"><polyline points="1 6 4 9 10 2"/><polyline points="6 6 9 9 15 2"/></svg></span>`;
+            if (status === 'read') return `<span class="msg-tick" style="color:#53bdeb;"><svg viewBox="0 0 16 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:10px"><polyline points="1 6 4 9 10 2"/><polyline points="6 6 9 9 15 2"/></svg></span>`;
+            if (status === 'failed') return `<span class="msg-tick" style="color:var(--danger); font-size:10px;">⚠️</span>`;
+            return '';
+        };
+
+        msgs.forEach(msg=>{
+            const lbl='Today';
+            if(lbl!==lastDate){lastDate=lbl;const sep=document.createElement('div');sep.className='date-separator';sep.innerHTML=`<div class="date-pill">${lbl}</div>`;messageArea.appendChild(sep);}
+            const isOut=msg.type!=='incoming';
+            
+            const isSelected = selectedMessages.includes(msg.id);
+            const selClass = isSelected ? 'selected' : '';
+            
+            const div=document.createElement('div');
+            div.className=`msg ${isOut?'outgoing':'incoming'} ${selClass}`;
+            
+            // Add click and context menu handlers
+            div.setAttribute('oncontextmenu', `onMsgContext(event, ${msg.id})`);
+            div.setAttribute('onclick', `msgClickWrap(event, ${msg.id})`);
+            
+            const tick=isOut?getTickHTML(msg.status):'';
+            const safeText = linkify(esc(msg.text));
+            
+            const rawText = msg.text || '';
+            const isMedia = rawText.includes('[Image') || rawText.includes('[Video') || rawText.includes('[Document') || rawText.includes('[Audio') || rawText.includes('[📷') || rawText.includes('[🎬') || rawText.includes('[📄') || rawText.includes('[🎙️') || (rawText.includes('https://') && rawText.match(/\.(jpeg|jpg|png|mp4|gif|webp)/i));
+            
+            const fwdBtnHtml = isMedia ? `<button class="quick-fwd-btn" title="Forward Media" onclick="quickForward(event, ${msg.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 10 20 15 15 20"/><path d="M4 4v7a4 4 0 0 0 4 4h12"/></svg></button>` : '';
+            
+            let finalContent = safeText;
+            if (isMedia) {
+                const urlMatch = rawText.match(/(\/static\/chat_media\/[^ \n]+)/);
+                if (urlMatch) {
+                    const mediaUrl = urlMatch[1];
+                    const textParts = rawText.split(mediaUrl);
+                    const captionRaw = textParts.length > 1 ? textParts[1].trim() : '';
+                    const safeCaption = linkify(esc(captionRaw));
+                    
+                    if (rawText.includes('[Image') || rawText.includes('[📷')) {
+                        finalContent = `<div style="margin:-9px -14px 6px; border-top-left-radius:12px; border-top-right-radius:12px; overflow:hidden;"><img src="${mediaUrl}" style="display:block; width:100%; max-height:300px; object-fit:cover; cursor:pointer;" onclick="window.open('${mediaUrl}','_blank')"></div>`;
+                        if(captionRaw) finalContent += `<div>${safeCaption}</div>`;
+                    } else if (rawText.includes('[Video') || rawText.includes('[🎬')) {
+                        finalContent = `<div style="margin:-9px -14px 6px; border-top-left-radius:12px; border-top-right-radius:12px; overflow:hidden;"><video src="${mediaUrl}" controls style="display:block; width:100%; max-height:300px;"></video></div>`;
+                        if(captionRaw) finalContent += `<div>${safeCaption}</div>`;
+                    } else if (rawText.includes('[Audio') || rawText.includes('[🎙️')) {
+                        finalContent = `<div style="padding:6px 0;"><audio src="${mediaUrl}" controls style="height:36px; max-width:200px;"></audio></div>`;
+                    } else {
+                        // Document / unknown
+                        finalContent = `<div><a href="${mediaUrl}" target="_blank" style="color:var(--green); text-decoration:underline; font-weight:600;">📎 View Attachment</a></div>`;
+                        if(captionRaw) finalContent += `<div>${safeCaption}</div>`;
+                    }
+                }
+            }
+            
+            div.innerHTML=`<div class="msg-content">${finalContent}</div><div class="msg-footer"><span class="msg-time">${fmtTime(msg.timestamp)}</span>${tick}</div>${fwdBtnHtml}`;
+            messageArea.appendChild(div);
+        });
+        if(atBottom||lastMessageCount===0)scrollToBottom(false);
+        lastMessageCount=msgs.length;
+    }catch(e){console.error('loadMessages:',e);}
+}
+
+// ── SEND TEXT ─────────────────────────────────────────────────
+async function sendMessage(){
+    const inp=document.getElementById('messageInput');
+    const btn=document.getElementById('sendBtn');
+    const text=inp.value.trim();
+    if(!text||!activePhone)return;
+    inp.value='';inp.focus();
+    btn.classList.add('sending');setTimeout(()=>btn.classList.remove('sending'),400);
+    try{await fetch('/api/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:activePhone,message:text})});loadMessages();loadChats();}
+    catch(e){console.error('sendMessage:',e);}
+}
+
+// ── FIRE CONVERSION ─────────────────────────────────────────────
+async function fireConversion(){
+    if(!activePhone){showToast('⚠️ Select a conversation first');return;}
+    const btn=document.getElementById('fireConversionBtn');
+    btn.disabled=true; btn.style.opacity='0.5';
+    try{
+        const r=await fetch('/api/fire_conversion',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:activePhone})});
+        const res=await r.json();
+        if(res.error) {
+            showToast('❌ ' + res.error);
+            btn.disabled=false; btn.style.opacity='1';
+        } else {
+            showToast('✅ Conversion fired successfully!');
+            // Turn icon green, disable permanently
+            btn.style.color = 'var(--green)';
+            btn.style.borderColor = 'var(--green)';
+            btn.style.background = 'rgba(0,168,132,0.12)';
+            btn.style.opacity = '1';
+            btn.disabled = true;
+            btn.title = 'Conversion already fired';
+            // Mark in local state so chat item turns green
+            if (allChats) {
+                const c = allChats.find(x => x.phone === activePhone);
+                if (c) c.lead_status = 'sent';
+            }
+            filterChats(document.getElementById('searchInput').value);
+        }
+    }catch(e){
+        console.error('fireConversion:',e);
+        showToast('❌ Failed to fire conversion');
+        btn.disabled=false; btn.style.opacity='1';
+    }
+}
+
+// ── INPUT TOGGLE (mic ↔ send arrow) ──────────────────────────
+let acIndex = -1;
+let currentAcMatches = [];
+
+function onInputChange(){
+    const text = document.getElementById('messageInput').value;
+    const hasText = text.trim().length > 0;
+    document.getElementById('sendBtn').classList.toggle('hidden', !hasText);
+    document.getElementById('micBtn').classList.toggle('hidden',  hasText);
+
+    // Autocomplete Logic
+    const popup = document.getElementById('autocompletePopup');
+    if (text.startsWith('/')) {
+        const query = text.toLowerCase();
+        currentAcMatches = savedTemplates.filter(t => t.shortcut.toLowerCase().startsWith(query));
+        if (currentAcMatches.length > 0) {
+            acIndex = 0;
+            renderAutocomplete();
+            popup.style.display = 'block';
+        } else {
+            popup.style.display = 'none';
+        }
+    } else {
+        popup.style.display = 'none';
+        acIndex = -1;
+    }
+}
+
+function renderAutocomplete() {
+    const popup = document.getElementById('autocompletePopup');
+    popup.innerHTML = currentAcMatches.map((t, idx) => `
+        <div class="autocomplete-item ${idx === acIndex ? 'selected' : ''}" onmousedown="applyAutocomplete(${idx})">
+            <div class="ac-shortcut">${t.shortcut} <span style="color:var(--text-3);font-weight:400;font-size:11px;">${t.title||''}</span></div>
+            <div class="ac-body">${t.body}</div>
+        </div>
+    `).join('');
+}
+
+function handleInputKeyDown(e) {
+    const popup = document.getElementById('autocompletePopup');
+    if (popup.style.display === 'block') {
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            acIndex = (acIndex + 1) % currentAcMatches.length;
+            renderAutocomplete();
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            acIndex = (acIndex - 1 + currentAcMatches.length) % currentAcMatches.length;
+            renderAutocomplete();
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            applyAutocomplete(acIndex);
+        } else if (e.key === 'Escape') {
+            popup.style.display = 'none';
+        }
+    } else {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    }
+}
+
+async function applyAutocomplete(idx) {
+    const t = currentAcMatches[idx];
+    if (!t) return;
+    const inp = document.getElementById('messageInput');
+    inp.value = t.body; // Insert text
+    document.getElementById('autocompletePopup').style.display = 'none';
+    acIndex = -1;
+    onInputChange();
+    inp.focus();
+    // Auto-send immediately as requested by user
+    sendMessage();
+}
+
+
+// ── VOICE NOTE RECORDING ──────────────────────────────────────
+let mediaRecorder    = null;
+let audioChunks      = [];
+let recTimerInterval = null;
+let recSeconds       = 0;
+let micStream        = null;  // keep reference for proper cleanup
+
+async function startRecording(){
+    if(!activePhone){ showToast('⚠️ Select a conversation first'); return; }
+
+    // Request microphone
+    try {
+        micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    } catch(e) {
+        if(e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError')
+            showToast('⚠️ Microphone access denied — allow it in browser settings');
+        else
+            showToast('⚠️ Could not access microphone: ' + e.message);
+        return;
+    }
+
+    // Pick best supported mimeType — prefer webm/opus (Chrome), then ogg/opus (Firefox), then mp4 (Safari)
+    const mimeType = ['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/mp4','']
+        .find(t => t === '' || MediaRecorder.isTypeSupported(t));
+
+    audioChunks = [];
+    try {
+        mediaRecorder = new MediaRecorder(micStream, mimeType ? { mimeType } : {});
+    } catch(e) {
+        mediaRecorder = new MediaRecorder(micStream);
+    }
+    mediaRecorder.ondataavailable = e => { if(e.data && e.data.size > 0) audioChunks.push(e.data); };
+    mediaRecorder.start(100);
+
+    // Show recording bar
+    document.getElementById('recordingBar').classList.add('active');
+    document.getElementById('attachBtn').style.visibility    = 'hidden';
+    document.getElementById('messageInput').style.visibility = 'hidden';
+    document.getElementById('sendBtn').style.visibility      = 'hidden';
+    document.getElementById('micBtn').style.visibility       = 'hidden';
+
+    // Start timer
+    recSeconds = 0;
+    document.getElementById('recTimer').textContent = '0:00';
+    recTimerInterval = setInterval(() => {
+        recSeconds++;
+        const m = Math.floor(recSeconds / 60);
+        const s = String(recSeconds % 60).padStart(2, '0');
+        document.getElementById('recTimer').textContent = `${m}:${s}`;
+        if(recSeconds >= 300) stopAndSendRecording(); // 5-min WhatsApp limit
+    }, 1000);
+}
+
+function cancelRecording(){
+    _stopMic();
+    clearInterval(recTimerInterval);
+    audioChunks = [];
+    hideRecordingBar();
+    showToast('🗑️ Recording cancelled');
+}
+
+function _stopMic(){
+    if(mediaRecorder && mediaRecorder.state !== 'inactive') {
+        try { mediaRecorder.stop(); } catch(_){}
+    }
+    if(micStream) {
+        micStream.getTracks().forEach(t => t.stop());
+        micStream = null;
+    }
+}
+
+// ── WAV encoder (Web Audio API → raw 16-bit PCM WAV) ──────────
+// This converts ANY browser audio blob (webm/ogg/mp4) into a
+// proper WAV file that Meta WhatsApp API accepts and delivers.
+async function blobToWav(blob){
+    const arrayBuf  = await blob.arrayBuffer();
+    const audioCtx  = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+    let decoded;
+    try {
+        decoded = await audioCtx.decodeAudioData(arrayBuf);
+    } finally {
+        audioCtx.close();
+    }
+
+    // Mix down to mono at 16 kHz
+    const sampleRate   = decoded.sampleRate;
+    const numChannels  = decoded.numberOfChannels;
+    const numSamples   = decoded.length;
+
+    // Mix channels to mono
+    const monoData = new Float32Array(numSamples);
+    for(let ch = 0; ch < numChannels; ch++){
+        const channelData = decoded.getChannelData(ch);
+        for(let i = 0; i < numSamples; i++) monoData[i] += channelData[i];
+    }
+    if(numChannels > 1) for(let i = 0; i < numSamples; i++) monoData[i] /= numChannels;
+
+    // Convert float32 to int16
+    const int16 = new Int16Array(numSamples);
+    for(let i = 0; i < numSamples; i++){
+        const s = Math.max(-1, Math.min(1, monoData[i]));
+        int16[i] = s < 0 ? s * 32768 : s * 32767;
+    }
+
+    // Build WAV header
+    const wavBuffer    = new ArrayBuffer(44 + int16.byteLength);
+    const view         = new DataView(wavBuffer);
+    const writeStr     = (offset, str) => { for(let i=0;i<str.length;i++) view.setUint8(offset+i, str.charCodeAt(i)); };
+    const bitsPerSample = 16;
+    const byteRate      = sampleRate * 1 * bitsPerSample / 8;
+    const blockAlign    = 1 * bitsPerSample / 8;
+
+    writeStr(0, 'RIFF');
+    view.setUint32(4,  36 + int16.byteLength, true);
+    writeStr(8, 'WAVE');
+    writeStr(12, 'fmt ');
+    view.setUint32(16, 16, true);           // PCM chunk size
+    view.setUint16(20, 1, true);            // PCM format
+    view.setUint16(22, 1, true);            // 1 channel (mono)
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, byteRate, true);
+    view.setUint16(32, blockAlign, true);
+    view.setUint16(34, bitsPerSample, true);
+    writeStr(36, 'data');
+    view.setUint32(40, int16.byteLength, true);
+    new Int16Array(wavBuffer, 44).set(int16);
+
+    return new Blob([wavBuffer], { type: 'audio/wav' });
+}
+
+async function encodeToMp3(blob) {
+    const arrayBuf = await blob.arrayBuffer();
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+    let decoded;
+    try { decoded = await audioCtx.decodeAudioData(arrayBuf); } 
+    finally { audioCtx.close(); }
+
+    const numSamples = decoded.length;
+    const monoData = new Float32Array(numSamples);
+    if(decoded.numberOfChannels > 1){
+        for(let ch=0; ch<decoded.numberOfChannels; ch++){
+            const channelData = decoded.getChannelData(ch);
+            for(let i=0; i<numSamples; i++) monoData[i] += channelData[i];
+        }
+        for(let i=0; i<numSamples; i++) monoData[i] /= decoded.numberOfChannels;
+    } else {
+        monoData.set(decoded.getChannelData(0));
+    }
+
+    const int16 = new Int16Array(numSamples);
+    for(let i=0; i<numSamples; i++){
+        const s = Math.max(-1, Math.min(1, monoData[i]));
+        int16[i] = s < 0 ? s * 32768 : s * 32767;
+    }
+
+    if(typeof lamejs === 'undefined') {
+        throw new Error('lamejs not loaded');
+    }
+    const encoder = new lamejs.Mp3Encoder(1, 16000, 128);
+    const mp3Data = [];
+    const sampleBlockSize = 1152;
+    for(let i=0; i<int16.length; i+=sampleBlockSize) {
+        const sampleChunk = int16.subarray(i, i+sampleBlockSize);
+        const mp3buf = encoder.encodeBuffer(sampleChunk);
+        if(mp3buf.length > 0) mp3Data.push(mp3buf);
+    }
+    const mp3buf = encoder.flush();
+    if(mp3buf.length > 0) mp3Data.push(mp3buf);
+
+    return new Blob(mp3Data, { type: 'audio/mpeg' });
+}
+
+async function stopAndSendRecording(){
+    if(!mediaRecorder || mediaRecorder.state === 'inactive') return;
+
+    // Collect final data then stop
+    const rawBlob = await new Promise(resolve => {
+        mediaRecorder.onstop = () => resolve(
+            new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' })
+        );
+        _stopMic();
+    });
+    clearInterval(recTimerInterval);
+
+    if(rawBlob.size < 500){
+        showToast('⚠️ Recording too short, try again');
+        hideRecordingBar();
+        return;
+    }
+
+    const sendBtn = document.getElementById('recSendBtn');
+    sendBtn.classList.add('uploading');
+    document.getElementById('recTimer').textContent = '⏳';
+
+    let mp3Blob;
+    try {
+        mp3Blob = await encodeToMp3(rawBlob);
+    } catch(e) {
+        console.warn('MP3 conversion failed, sending raw:', e);
+        mp3Blob = rawBlob;
+    }
+
+    const filename = `voice_${Date.now()}.mp3`;
+    const file     = new File([mp3Blob], filename, { type: 'audio/mpeg' });
+
+    // ── Step 1: Upload to Meta ─────────────────────────────────
+    const fd = new FormData();
+    fd.append('file', file, filename);
+    let media_id, local_url;
+    try {
+        const upRes  = await fetch('/api/upload_media', { method: 'POST', body: fd });
+        const upData = await upRes.json();
+        if(upData.error){
+            const msg = typeof upData.error === 'string'
+                ? upData.error
+                : (upData.error.message || upData.error.type || JSON.stringify(upData.error));
+            throw new Error(msg);
+        }
+        media_id = upData.media_id;
+        local_url = upData.local_url;
+    } catch(e){
+        showToast('⚠️ Upload failed: ' + e.message, 4000);
+        sendBtn.classList.remove('uploading');
+        document.getElementById('recTimer').textContent = recSeconds + 's';
+        return;
+    }
+
+    // ── Step 2: Send WhatsApp audio message ───────────────────
+    try {
+        const res  = await fetch('/api/send_audio', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: activePhone, media_id, local_url })
+        });
+        const data = await res.json();
+        if(data.error){
+            const msg = typeof data.error === 'string' ? data.error : (data.error.message || JSON.stringify(data.error));
+            throw new Error(msg);
+        }
+        showToast('🎙️ Voice note sent!');
+        loadMessages(); loadChats();
+    } catch(e){
+        showToast('⚠️ Send failed: ' + e.message, 3500);
+    } finally {
+        sendBtn.classList.remove('uploading');
+        hideRecordingBar();
+    }
+}
+
+function hideRecordingBar(){
+    document.getElementById('recordingBar').classList.remove('active');
+    document.getElementById('attachBtn').style.visibility    = '';
+    document.getElementById('messageInput').style.visibility = '';
+    document.getElementById('micBtn').style.visibility       = '';
+    onInputChange();
+}
+
+// ── INTERACTIVE MESSAGES ──────────────────────────────────────
+function toggleInteractiveFields() {
+    const t = document.getElementById('int-type').value;
+    const s = (id, show) => document.getElementById(id).style.display = show ? 'flex' : 'none';
+    const sBlock = (id, show) => document.getElementById(id).style.display = show ? 'block' : 'none';
+
+    // Reset all specific fields
+    sBlock('int-f-button_text', false);
+    sBlock('int-f-sections', false);
+    s('int-f-buttons', false);
+    s('int-f-catalog', false);
+    s('int-f-address', false);
+    s('int-f-flow1', false);
+    s('int-f-flow2', false);
+    s('int-f-header-footer', true); // Most support header/footer
+
+    if(t === 'list') {
+        sBlock('int-f-button_text', true);
+        sBlock('int-f-sections', true);
+    } else if(t === 'button') {
+        s('int-f-buttons', true);
+    } else if(t === 'product') {
+        s('int-f-catalog', true);
+    } else if(t === 'product_list') {
+        sBlock('int-f-sections', true);
+        s('int-f-catalog', true);
+    } else if(t === 'catalog_message') {
+        s('int-f-catalog', true); // reuse product_id for thumb_id
+        s('int-f-header-footer', false);
+    } else if(t === 'location_request_message') {
+        s('int-f-header-footer', false);
+    } else if(t === 'address_message') {
+        s('int-f-address', true);
+        s('int-f-header-footer', false);
+    } else if(t === 'flow') {
+        s('int-f-flow1', true);
+        s('int-f-flow2', true);
+    }
+}
+
+async function sendInteractiveMsg() {
+    if(!activePhone){ showToast('⚠️ Select a conversation first'); return; }
+    
+    const btn = document.getElementById('send-interactive-btn');
+    const oldHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = 'Sending...';
+
+    const t = document.getElementById('int-type').value;
+    const payload = {
+        phone: activePhone,
+        itype: t,
+        body: document.getElementById('int-body').value.trim(),
+        header: document.getElementById('int-header').value.trim(),
+        footer: document.getElementById('int-footer').value.trim()
+    };
+
+    try {
+        if(t === 'list' || t === 'product_list') {
+            const raw = document.getElementById('int-sections').value.trim();
+            if(!raw) throw new Error("Sections JSON is required");
+            try { payload.sections = JSON.parse(raw); } catch(e) { throw new Error("Invalid JSON in sections"); }
+            if(t === 'list') payload.button_text = document.getElementById('int-button_text').value.trim();
+            if(t === 'product_list') payload.catalog_id = document.getElementById('int-catalog_id').value.trim();
+        } else if(t === 'button') {
+            const b1 = document.getElementById('int-btn1').value.trim();
+            const b2 = document.getElementById('int-btn2').value.trim();
+            const b3 = document.getElementById('int-btn3').value.trim();
+            const arr = [];
+            if(b1) arr.push({id: "btn1", title: b1});
+            if(b2) arr.push({id: "btn2", title: b2});
+            if(b3) arr.push({id: "btn3", title: b3});
+            payload.buttons = arr;
+        } else if(t === 'product') {
+            payload.catalog_id = document.getElementById('int-catalog_id').value.trim();
+            payload.product_retailer_id = document.getElementById('int-product_id').value.trim();
+        } else if(t === 'catalog_message') {
+            payload.thumbnail_product_retailer_id = document.getElementById('int-product_id').value.trim();
+        } else if(t === 'address_message') {
+            payload.country_code = document.getElementById('int-country_code').value.trim();
+        } else if(t === 'flow') {
+            payload.flow_id = document.getElementById('int-flow_id').value.trim();
+            payload.cta_text = document.getElementById('int-flow_cta').value.trim();
+            payload.screen = document.getElementById('int-flow_screen').value.trim();
+            payload.flow_token = document.getElementById('int-flow_token').value.trim();
+        }
+
+        const res = await fetch('/api/send_interactive_msg', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if(data.error) throw new Error(data.error);
+
+        showToast('✅ Interactive message sent!');
+        closeModal('interactive');
+        
+        // Reset form completely
+        document.getElementById('int-body').value = '';
+        document.getElementById('int-header').value = '';
+        document.getElementById('int-footer').value = '';
+        document.getElementById('int-sections').value = '';
+        
+        loadMessages(); loadChats();
+    } catch(e) {
+        showToast('⚠️ Send failed: ' + e.message, 5000);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = oldHtml;
+    }
+}
+
+// ── INTERACTIVE TEMPLATES ──────────────────────────────────────
+let cachedIntTemplates = [];
+
+async function fetchInteractiveTemplates() {
+    try {
+        const res = await fetch('/api/interactive_templates');
+        cachedIntTemplates = await res.json();
+        renderTemplateList();
+    } catch(e) {
+        console.error('Failed to load templates', e);
+    }
+}
+
+function renderTemplateList() {
+    const typeNode = document.getElementById('int-type');
+    if(!typeNode) return;
+    const type = typeNode.value;
+    const listDiv = document.getElementById('int-template-list');
+    if (!listDiv) return;
+    
+    listDiv.innerHTML = '';
+    const filtered = cachedIntTemplates.filter(t => t.itype === type);
+    
+    if(filtered.length === 0) {
+        listDiv.innerHTML = '<div style="color:var(--text-3); font-size:12px; text-align:center; padding:10px;">No saved templates for this type.</div>';
+        return;
+    }
+    
+    filtered.forEach(t => {
+        const row = document.createElement('div');
+        row.style.cssText = "background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:10px; padding:12px; display:flex; flex-direction:column; gap:8px;";
+        
+        row.innerHTML = `
+            <div style="font-size:14px; font-weight:600; color:var(--text-1);">${t.name}</div>
+            <div style="display:flex; gap:6px;">
+                <button onclick="sendInteractiveMsgDirectly(${t.id})" style="flex:1; padding:6px; background:var(--green); border:none; border-radius:6px; color:white; cursor:pointer; font-weight:500; font-size:12px; transition:transform 0.1s;">Send</button>
+                <button onclick="openTemplateForm(${t.id})" style="flex:1; padding:6px; background:rgba(255,255,255,0.1); border:none; border-radius:6px; color:var(--text-1); cursor:pointer; font-weight:500; font-size:12px;">Edit</button>
+                <button onclick="deleteInteractiveTemplate(${t.id})" style="flex:1; padding:6px; background:rgba(255,107,107,0.15); border:none; border-radius:6px; color:var(--danger); cursor:pointer; font-weight:500; font-size:12px;">Delete</button>
+            </div>
+        `;
+        listDiv.appendChild(row);
+    });
+}
+
+function openTemplateForm(idOrNew) {
+    try {
+        document.getElementById('int-template-list').style.display = 'none';
+        document.getElementById('btn-create-new-template').style.display = 'none';
+        document.getElementById('int-form-wrapper').style.display = 'block';
+        
+        document.querySelectorAll('#modal-interactive input:not([type="hidden"]), #modal-interactive textarea').forEach(el => {
+            el.value = '';
+        });
+        
+        if(idOrNew === 'new') {
+            document.getElementById('int-editing-id').value = '';
+            toggleInteractiveFields();
+            return;
+        }
+        
+        document.getElementById('int-editing-id').value = idOrNew;
+        const t = cachedIntTemplates.find(x => x.id == idOrNew);
+        if(!t) return;
+        
+        document.getElementById('int-body').value = t.payload.body || '';
+        document.getElementById('int-header').value = t.payload.header || '';
+        document.getElementById('int-footer').value = t.payload.footer || '';
+        
+        if(t.itype === 'list') {
+            document.getElementById('int-button_text').value = t.payload.button_text || '';
+            document.getElementById('int-sections').value = JSON.stringify(t.payload.sections || [], null, 2);
+        } else if(t.itype === 'button') {
+            if(t.payload.buttons && t.payload.buttons[0]) document.getElementById('int-btn1').value = t.payload.buttons[0].title;
+            if(t.payload.buttons && t.payload.buttons[1]) document.getElementById('int-btn2').value = t.payload.buttons[1].title;
+            if(t.payload.buttons && t.payload.buttons[2]) document.getElementById('int-btn3').value = t.payload.buttons[2].title;
+        } else if(t.itype === 'product' || t.itype === 'catalog_message') {
+            document.getElementById('int-catalog_id').value = t.payload.catalog_id || '';
+            document.getElementById('int-product_id').value = t.payload.product_retailer_id || t.payload.thumbnail_product_retailer_id || '';
+        } else if(t.itype === 'product_list') {
+            document.getElementById('int-catalog_id').value = t.payload.catalog_id || '';
+            document.getElementById('int-sections').value = JSON.stringify(t.payload.sections || [], null, 2);
+        } else if(t.itype === 'address_message') {
+            document.getElementById('int-country_code').value = t.payload.country_code || '';
+        } else if(t.itype === 'flow') {
+            document.getElementById('int-flow_id').value = t.payload.flow_id || '';
+            document.getElementById('int-flow_cta').value = t.payload.cta_text || '';
+            document.getElementById('int-flow_screen').value = t.payload.screen || '';
+            document.getElementById('int-flow_token').value = t.payload.flow_token || '';
+        }
+        toggleInteractiveFields();
+    } catch(e) {
+        alert("Error opening form: " + e.message);
+    }
+}
+
+function closeTemplateForm() {
+    document.getElementById('int-template-list').style.display = 'flex';
+    document.getElementById('btn-create-new-template').style.display = 'block';
+    document.getElementById('int-form-wrapper').style.display = 'none';
+}
+
+async function deleteInteractiveTemplate(id) {
+    if(!confirm("Are you sure you want to delete this template?")) return;
+    try {
+        const res = await fetch('/api/interactive_templates/' + id, {method: 'DELETE'});
+        const data = await res.json();
+        if(data.error) throw new Error(data.error);
+        showToast('✅ Template deleted');
+        fetchInteractiveTemplates();
+    } catch(e) {
+        showToast('⚠️ Delete failed: ' + e.message);
+    }
+}
+
+async function sendInteractiveMsgDirectly(id) {
+    if(!activePhone){ showToast('⚠️ Select a conversation first'); return; }
+    const t = cachedIntTemplates.find(x => x.id == id);
+    if(!t) return;
+    
+    const payload = Object.assign({phone: activePhone, itype: t.itype}, t.payload);
+    
+    try {
+        const res = await fetch('/api/send_interactive_msg', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if(data.error) throw new Error(data.error);
+        
+        loadMessages(); loadChats();
+        closeModal('interactive');
+        showToast('✅ Sent successfully');
+    } catch(e) {
+        showToast('⚠️ Send failed: ' + e.message, 5000);
+    }
+}
+
+async function saveInteractiveTemplate() {
+    const t = document.getElementById('int-type').value;
+    const editingId = document.getElementById('int-editing-id').value;
+    const payload = {
+        body: document.getElementById('int-body').value.trim(),
+        header: document.getElementById('int-header').value.trim(),
+        footer: document.getElementById('int-footer').value.trim()
+    };
+    
+    try {
+        if(t === 'list' || t === 'product_list') {
+            const raw = document.getElementById('int-sections').value.trim();
+            if(raw) payload.sections = JSON.parse(raw);
+            if(t === 'list') payload.button_text = document.getElementById('int-button_text').value.trim();
+            if(t === 'product_list') payload.catalog_id = document.getElementById('int-catalog_id').value.trim();
+        } else if(t === 'button') {
+            const b1 = document.getElementById('int-btn1').value.trim();
+            const b2 = document.getElementById('int-btn2').value.trim();
+            const b3 = document.getElementById('int-btn3').value.trim();
+            const arr = [];
+            if(b1) arr.push({id: "btn1", title: b1});
+            if(b2) arr.push({id: "btn2", title: b2});
+            if(b3) arr.push({id: "btn3", title: b3});
+            payload.buttons = arr;
+        } else if(t === 'product') {
+            payload.catalog_id = document.getElementById('int-catalog_id').value.trim();
+            payload.product_retailer_id = document.getElementById('int-product_id').value.trim();
+        } else if(t === 'catalog_message') {
+            payload.thumbnail_product_retailer_id = document.getElementById('int-product_id').value.trim();
+        } else if(t === 'address_message') {
+            payload.country_code = document.getElementById('int-country_code').value.trim();
+        } else if(t === 'flow') {
+            payload.flow_id = document.getElementById('int-flow_id').value.trim();
+            payload.cta_text = document.getElementById('int-flow_cta').value.trim();
+            payload.screen = document.getElementById('int-flow_screen').value.trim();
+            payload.flow_token = document.getElementById('int-flow_token').value.trim();
+        }
+        
+        let url = '/api/interactive_templates';
+        let method = 'POST';
+        let reqBody = {itype: t, payload: payload};
+        
+        if (editingId) {
+            url += '/' + editingId;
+            method = 'PUT';
+        } else {
+            const name = prompt('Enter a name for this new template:');
+            if(!name) return;
+            reqBody.name = name;
+        }
+        
+        const res = await fetch(url, {
+            method: method,
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(reqBody)
+        });
+        const data = await res.json();
+        if(data.error) throw new Error(data.error);
+        
+        showToast('✅ Template saved!');
+        await fetchInteractiveTemplates();
+        closeTemplateForm();
+    } catch(e) {
+        showToast('⚠️ Save failed: ' + e.message, 4000);
+    }
+}
+
+// ── SIDEBAR TABS & SEARCH ─────────────────────────────────────
+function switchSidebarTab(tab) {
+    if(tab === 'chats') {
+        document.getElementById('tabChats').classList.add('active');
+        document.getElementById('tabContacts').classList.remove('active');
+    } else {
+        document.getElementById('tabContacts').classList.add('active');
+        document.getElementById('tabChats').classList.remove('active');
+    }
+    
+    document.getElementById('chatsView').style.display = tab === 'chats' ? 'flex' : 'none';
+    document.getElementById('contactsView').style.display = tab === 'contacts' ? 'flex' : 'none';
+}
+
+function filterSidebar(q) {
+    filterChats(q);
+    const qLower = q.toLowerCase();
+    const items = document.getElementById('contactList').children;
+    for(let i=0; i<items.length; i++){
+        items[i].style.display = items[i].innerText.toLowerCase().includes(qLower) ? 'flex' : 'none';
+    }
+}
+
+// ── CONTACTS MANAGEMENT ───────────────────────────────────────
+async function loadContacts() {
+    try {
+        const r = await fetch('/api/contacts');
+        const contacts = await r.json();
+        allContacts = contacts;
+        
+        renderContactList(contacts);
+
+        // Re-render chat list with fresh contact names
+        if(allChats && allChats.length > 0) filterChats(document.getElementById('searchInput').value);
+        if(activePhone) {
+            const cName = getContactName(activePhone);
+            const displayName = cName ? cName : activePhone;
+            const headerEl = document.getElementById('currentChatPhone');
+            if(headerEl) headerEl.innerText = displayName;
+            setHeaderAvatar(displayName);
+        }
+    } catch(e) {
+        console.error('loadContacts:', e);
+    }
+}
+
+function renderContactList(contacts) {
+    const list = document.getElementById('contactList');
+    if (!list) return;
+    list.innerHTML = '';
+    if(contacts.length === 0) {
+        list.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-3); font-size:13px;">No contacts found.<br>Add one manually or import a VCF file.</div>`;
+    } else {
+        contacts.forEach(c => {
+            const div = document.createElement('div');
+            div.className = 'chat-item';
+            div.innerHTML = `
+                <div class="avatar" style="background:var(--bg-input); color:var(--text-1); font-weight:600; width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center;">${String(c.name || '?').charAt(0).toUpperCase()}</div>
+                <div class="chat-item-info" style="flex:1;" onclick="startChatWith('${esc(c.phone)}')">
+                    <div class="chat-item-header">
+                        <span class="chat-item-name">${esc(c.name)}</span>
+                    </div>
+                    <div class="chat-item-msg">${esc(c.phone)}</div>
+                </div>
+                <button onclick="editContact(${c.id}, '${esc(c.name.replace(/'/g, "\\'"))}', '${esc(c.phone)}', event)" style="background:none; border:none; color:var(--primary); cursor:pointer; padding:8px;">✏️</button>
+                <button onclick="deleteContact(${c.id}, event)" style="background:none; border:none; color:var(--danger); cursor:pointer; padding:8px; opacity:0.7;">🗑️</button>
+            `;
+            list.appendChild(div);
+        });
+    }
+}
+
+let editingContactId = null;
+
+function openAddContactModal() {
+    editingContactId = null;
+    document.getElementById('addContactName').value = '';
+    document.getElementById('addContactPhone').value = '';
+    document.getElementById('addContactPhone').disabled = false;
+    document.getElementById('addContactModal').style.display = 'flex';
+    setTimeout(() => document.getElementById('addContactName').focus(), 100);
+}
+
+function openAddContactModalWithPhone(phone) {
+    editingContactId = null;
+    document.getElementById('addContactName').value = '';
+    document.getElementById('addContactPhone').value = phone;
+    document.getElementById('addContactPhone').disabled = true; // phone pre-filled, lock it
+    document.getElementById('addContactModal').style.display = 'flex';
+    setTimeout(() => document.getElementById('addContactName').focus(), 100);
+}
+
+
+function editContact(cid, name, phone, e) {
+    if(e) e.stopPropagation();
+    editingContactId = cid;
+    document.getElementById('addContactName').value = name;
+    document.getElementById('addContactPhone').value = phone;
+    document.getElementById('addContactPhone').disabled = false;
+    document.getElementById('addContactModal').style.display = 'flex';
+}
+
+async function submitAddContact() {
+    const name = document.getElementById('addContactName').value;
+    const phone = document.getElementById('addContactPhone').value;
+    if(!name || !phone) return;
+    try {
+        if(editingContactId) {
+            await fetch('/api/contacts/' + editingContactId, {
+                method:'PUT', headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({name, phone})
+            });
+            showToast('✅ Contact updated');
+        } else {
+            await fetch('/api/contacts', {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({name, phone})
+            });
+            showToast('✅ Contact saved');
+        }
+        document.getElementById('addContactModal').style.display = 'none';
+        loadContacts();
+    } catch(e) { console.error('Add/Edit contact:', e); }
+}
+
+async function deleteContact(cid, e) {
+    if(e) e.stopPropagation();
+    if(!confirm("Delete this contact?")) return;
+    try {
+        await fetch('/api/contacts/'+cid, {method:'DELETE'});
+        loadContacts();
+        showToast('🗑️ Contact deleted');
+    } catch(e) { console.error('Delete contact:', e); }
+}
+
+async function uploadVCF(input) {
+    if(!input.files || input.files.length === 0) return;
+    const fd = new FormData();
+    fd.append('file', input.files[0]);
+    try {
+        const r = await fetch('/api/contacts/upload_vcf', { method: 'POST', body: fd });
+        const res = await r.json();
+        if(res.error) showToast('❌ ' + res.error);
+        else {
+            showToast(`✅ Imported ${res.added} contacts!`);
+            loadContacts();
+        }
+    } catch(e) { console.error('Upload VCF:', e); }
+    input.value = ''; // reset
+}
+
+// ── NEW MESSAGE ───────────────────────────────────────────────
+function openNewMessageModal() {
+    document.getElementById('newMessagePhone').value = '';
+    document.getElementById('newMessageModal').style.display = 'flex';
+}
+
+function submitNewMessage() {
+    let phone = document.getElementById('newMessagePhone').value.trim();
+    if(!phone) return;
+    // ensure + prefix
+    if (!phone.startsWith('+')) {
+        phone = '+' + phone.replace(/[^0-9]/g, '');
+    } else {
+        phone = '+' + phone.substring(1).replace(/[^0-9]/g, '');
+    }
+    document.getElementById('newMessageModal').style.display = 'none';
+    startChatWith(phone);
+}
+
+function startChatWith(phone) {
+    switchSidebarTab('chats');
+    selectChat(phone);
+    if (window.pendingPrefillText) {
+        setTimeout(() => {
+            const input = document.getElementById('messageInput');
+            if (input) {
+                input.value = window.pendingPrefillText;
+                input.focus();
+                // trigger auto-resize
+                input.style.height = '';
+                input.style.height = input.scrollHeight + 'px';
+                window.pendingPrefillText = null;
+            }
+        }, 600);
+    }
+}
+
+// ── POLLING ───────────────────────────────────────────────────
+async function init() {
+    if ("Notification" in window && window.Notification.permission !== "denied" && window.Notification.permission !== "granted") {
+        window.Notification.requestPermission();
+    }
+    await loadContacts();  // wait for contacts first
+    await loadChats();     // then render chats with contact names resolved
+    await loadTemplates(); // load quick replies
+    fetchInteractiveTemplates();
+    setInterval(async () => {
+        await loadChats();
+        loadMessages();
+    }, 2000);
+    // refresh contacts every 30s so newly added contacts show up in chat list
+    setInterval(loadContacts, 30000);
+
+    // Check URL parameters for redirects from Data page
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('tab') === 'contacts') {
+        switchSidebarTab('contacts');
+        const prefillText = urlParams.get('prefill');
+        if (prefillText) {
+            window.pendingPrefillText = prefillText;
+            setTimeout(() => showToast('Select a contact to send the order to.'), 500);
+        }
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+}
+init();
+
+// ════════════════════════════════════════════════════════
+//  FLOATING ORDER PANEL (toggled, not a modal)
+// ════════════════════════════════════════════════════════
+let chatOrderProducts = [];
+let chatOrderSelections = {};
+let chatOrderStep = 1;
+let chatOrderPanelInitialized = false;
+let chatOrderPanelMinimized = false;
+
+// Toggle panel open/closed (create button behavior)
+async function openChatOrderModal() {
+    if (!activePhone) { showToast('⚠️ Select a conversation first'); return; }
+    const panel = document.getElementById('orderFloatPanel');
+    const btn = document.getElementById('createOrderBtn');
+
+    if (panel.classList.contains('visible')) {
+        // Panel is open — hide it (don't destroy state)
+        panel.classList.remove('visible');
+        btn.classList.remove('panel-open');
+        return;
+    }
+
+    // First open, or re-opening for a different chat: initialize
+    if (!chatOrderPanelInitialized || document.getElementById('co-phone').value !== activePhone) {
+        chatOrderSelections = {};
+        chatOrderStep = 1;
+        // Fetch products
+        try {
+            const r = await fetch('/api/products');
+            chatOrderProducts = await r.json();
+        } catch(e) { chatOrderProducts = []; }
+        // Auto-fill
+        const contactName = getContactName(activePhone) || '';
+        document.getElementById('co-name').value = contactName;
+        document.getElementById('co-phone').value = activePhone;
+        document.getElementById('co-address').value = '';
+        document.getElementById('co-location').value = '';
+        document.getElementById('co-deliveryDate').value = '';
+        document.getElementById('co-delivery').value = '0';
+        // Try to auto-find location from recent messages
+        try {
+            const mr = await fetch(`/api/messages/${activePhone}`);
+            const msgs = await mr.json();
+            for (let i = msgs.length - 1; i >= 0; i--) {
+                const m = msgs[i];
+                if (m.type === 'incoming' && m.text) {
+                    const locMatch = m.text.match(/(https?:\/\/(?:maps\.google|goo\.gl|maps\.app)[^\s]+)/i);
+                    if (locMatch) { document.getElementById('co-location').value = locMatch[1]; break; }
+                }
+            }
+        } catch(e) {}
+        goChatOrderStep(1);
+        chatOrderPanelInitialized = true;
+    } else {
+        // Restore minimized state
+        panel.classList.remove('minimized');
+        chatOrderPanelMinimized = false;
+        updatePanelMinimizeBtn();
+    }
+
+    // Show panel
+    panel.classList.add('visible');
+    btn.classList.add('panel-open');
+}
+
+function closeChatOrderModal() {
+    // True close — resets state
+    const panel = document.getElementById('orderFloatPanel');
+    const btn = document.getElementById('createOrderBtn');
+    panel.classList.remove('visible');
+    btn.classList.remove('panel-open');
+    chatOrderPanelInitialized = false;
+    chatOrderSelections = {};
+    chatOrderStep = 1;
+}
+
+function togglePanelMinimize() {
+    const panel = document.getElementById('orderFloatPanel');
+    chatOrderPanelMinimized = !chatOrderPanelMinimized;
+    panel.classList.toggle('minimized', chatOrderPanelMinimized);
+    updatePanelMinimizeBtn();
+}
+
+function updatePanelMinimizeBtn() {
+    const btn = document.getElementById('ofpMinBtn');
+    if (!btn) return;
+    btn.innerHTML = chatOrderPanelMinimized
+        ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>'
+        : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+    btn.title = chatOrderPanelMinimized ? 'Expand' : 'Minimize';
+}
+
+function goChatOrderStep(step) {
+    if (step === 2) {
+        if (!document.getElementById('co-phone').value.trim()) { showToast('Phone required'); return; }
+        renderChatOrderProducts();
+    }
+    if (step === 3) {
+        const sel = Object.entries(chatOrderSelections).filter(([,q]) => q > 0);
+        if (!sel.length) { showToast('Select at least one product'); return; }
+        buildChatOrderReview();
+    }
+    chatOrderStep = step;
+    document.querySelectorAll('.om-step-content').forEach(s => s.classList.remove('active'));
+    document.getElementById('co-step-' + step).classList.add('active');
+    [1,2,3].forEach(i => {
+        const dot = document.getElementById('co-sdot-' + i);
+        const lbl = document.getElementById('co-slbl-' + i);
+        const line = i < 3 ? document.getElementById('co-sline-' + i) : null;
+        if (i < step) { dot.className='om-step-dot done'; dot.innerHTML='✓'; lbl.className='om-step-lbl done'; if(line) line.className='om-step-line done'; }
+        else if (i === step) { dot.className='om-step-dot active'; dot.textContent=i; lbl.className='om-step-lbl active'; }
+        else { dot.className='om-step-dot inactive'; dot.textContent=i; lbl.className='om-step-lbl inactive'; if(line) line.className='om-step-line'; }
+    });
+    // Update panel subtitle
+    const subtitles = {1:'Customer details',2:'Select products',3:'Review & confirm'};
+    const sub = document.getElementById('ofp-subtitle');
+    if (sub) sub.textContent = subtitles[step] || '';
+    // Un-minimize if minimized
+    const panel = document.getElementById('orderFloatPanel');
+    if (panel) { panel.classList.remove('minimized'); chatOrderPanelMinimized = false; updatePanelMinimizeBtn(); }
+}
+
+function renderChatOrderProducts() {
+    const grid = document.getElementById('co-prod-grid');
+    if (!chatOrderProducts.length) {
+        grid.innerHTML = '<p style="color:var(--text-3);text-align:center;padding:20px;font-size:13px;">No products registered. <a href="/data" style="color:#f59e0b;">Go to Data →</a></p>';
+        return;
+    }
+    grid.innerHTML = chatOrderProducts.map(p => {
+        const qty = chatOrderSelections[p.id] || 0;
+        return `<div class="om-ps-card ${qty > 0 ? 'selected' : ''}" id="co-psc-${p.id}">
+            <div class="om-ps-img">${p.image_path ? `<img src="${p.image_path}" alt="">` : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>'}</div>
+            <div class="om-ps-name">${escCO(p.name)}</div>
+            <div class="om-ps-price">Rs ${Number(p.price).toLocaleString()}</div>
+            <div class="om-qty-ctrl">
+                <button class="om-qty-btn" onclick="changeCOQty(${p.id},-1)">−</button>
+                <span class="om-qty-val" id="co-qty-${p.id}">${qty}</span>
+                <button class="om-qty-btn" onclick="changeCOQty(${p.id},1)">+</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function changeCOQty(pid, delta) {
+    const cur = chatOrderSelections[pid] || 0;
+    const nq = Math.max(0, cur + delta);
+    chatOrderSelections[pid] = nq;
+    const el = document.getElementById('co-qty-' + pid);
+    if (el) el.textContent = nq;
+    const card = document.getElementById('co-psc-' + pid);
+    if (card) card.classList.toggle('selected', nq > 0);
+}
+
+function buildChatOrderReview() {
+    document.getElementById('co-rv-name').textContent = document.getElementById('co-name').value || '—';
+    document.getElementById('co-rv-phone').textContent = document.getElementById('co-phone').value;
+    document.getElementById('co-rv-address').textContent = document.getElementById('co-address').value || '—';
+    updateCOTotal();
+    const items = Object.entries(chatOrderSelections).filter(([,q])=>q>0).map(([pid,qty]) => {
+        const p = chatOrderProducts.find(x => x.id == pid);
+        return p ? `<div class="om-review-row"><span class="r-l">${escCO(p.name)} ×${qty}</span><span class="r-v">Rs ${(p.price*qty).toLocaleString()}</span></div>` : '';
+    }).join('');
+    document.getElementById('co-rv-items').innerHTML = items;
+}
+
+function updateCOTotal() {
+    const subtotal = Object.entries(chatOrderSelections).filter(([,q])=>q>0).reduce((s,[pid,qty]) => {
+        const p = chatOrderProducts.find(x => x.id == pid);
+        return s + (p ? p.price * qty : 0);
+    }, 0);
+    const delivery = parseFloat(document.getElementById('co-delivery').value) || 0;
+    document.getElementById('co-rv-subtotal').textContent = 'Rs ' + subtotal.toLocaleString();
+    document.getElementById('co-rv-total').textContent = 'Rs ' + (subtotal+delivery).toLocaleString();
+}
+
+async function submitChatOrder() {
+    const btn = document.getElementById('co-submit-btn');
+    btn.disabled = true;
+    const items = Object.entries(chatOrderSelections).filter(([,q])=>q>0).map(([pid,qty]) => {
+        const p = chatOrderProducts.find(x => x.id == pid);
+        return { product_id:parseInt(pid), product_name:p.name, product_price:p.price, quantity:qty };
+    });
+    const payload = {
+        customer_name: document.getElementById('co-name').value.trim(),
+        phone: document.getElementById('co-phone').value.trim(),
+        address: document.getElementById('co-address').value.trim(),
+        location_link: document.getElementById('co-location').value.trim(),
+        delivery_date: document.getElementById('co-deliveryDate').value.trim(),
+        delivery_charge: parseFloat(document.getElementById('co-delivery').value) || 0,
+        items
+    };
+    try {
+        const r = await fetch('/api/orders', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+        const data = await r.json();
+        if (data.error) throw new Error(data.error);
+        closeChatOrderModal();
+        showToast('✅ Order #' + data.id + ' created!');
+    } catch(e) {
+        showToast('❌ ' + e.message);
+    } finally { btn.disabled = false; }
+}
+
+function escCO(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── SELECTION LOGIC ───────────────────────────────────────────
+let chatSelectionMode = false;
+let selectedChats = [];
+let msgSelectionMode = false;
+let selectedMessages = [];
+
+let lastChatClickTime = 0;
+let lastClickedChatPhone = null;
+
+let lastMsgClickTime = 0;
+let lastClickedMsgId = null;
+
+// Chats
+function onChatContext(e, phone) {
+    e.preventDefault();
+    toggleChatSelection(phone);
+}
+function chatClickWrap(e, phone) {
+    if(chatSelectionMode) {
+        e.preventDefault(); e.stopPropagation();
+        toggleChatSelection(phone);
+        return;
+    }
+    
+    // Double click detection
+    const now = Date.now();
+    if(lastClickedChatPhone === phone && now - lastChatClickTime < 400) {
+        e.preventDefault(); e.stopPropagation();
+        if(navigator.vibrate) navigator.vibrate(50);
+        toggleChatSelection(phone);
+        lastChatClickTime = 0;
+        return;
+    }
+    
+    lastClickedChatPhone = phone;
+    lastChatClickTime = now;
+    selectChat(phone);
+}
+function toggleChatSelection(phone) {
+    if(!chatSelectionMode) {
+        chatSelectionMode = true;
+        selectedChats = [phone];
+    } else {
+        if(selectedChats.includes(phone)) selectedChats = selectedChats.filter(p => p !== phone);
+        else selectedChats.push(phone);
+    }
+    if(selectedChats.length === 0) chatSelectionMode = false;
+    updateChatSelUI();
+    filterChats(document.getElementById('searchInput').value); // re-render list for visual updates
+}
+function updateChatSelUI() {
+    const bar = document.getElementById('chatSelBar');
+    if(chatSelectionMode) {
+        bar.classList.add('active');
+        document.getElementById('chatSelTitle').textContent = `${selectedChats.length} Selected`;
+    } else {
+        bar.classList.remove('active');
+    }
+}
+function exitChatSelection() {
+    chatSelectionMode = false;
+    selectedChats = [];
+    updateChatSelUI();
+    filterChats(document.getElementById('searchInput').value);
+}
+async function deleteSelectedChats() {
+    if(!confirm(`Delete ${selectedChats.length} chat(s)?`)) return;
+    for(const phone of selectedChats) {
+        await fetch(`/api/chats/${encodeURIComponent(phone)}`, { method: 'DELETE' });
+    }
+    showToast('✅ Chats deleted');
+    exitChatSelection();
+    loadChats();
+}
+
+// Messages
+function onMsgContext(e, id) {
+    e.preventDefault();
+    toggleMsgSelection(id);
+}
+function msgClickWrap(e, id) {
+    if(msgSelectionMode) {
+        e.preventDefault(); e.stopPropagation();
+        toggleMsgSelection(id);
+        return;
+    }
+    
+    // Double click detection
+    const now = Date.now();
+    if(lastClickedMsgId === id && now - lastMsgClickTime < 400) {
+        e.preventDefault(); e.stopPropagation();
+        if(navigator.vibrate) navigator.vibrate(50);
+        toggleMsgSelection(id);
+        lastMsgClickTime = 0;
+        return;
+    }
+    
+    lastClickedMsgId = id;
+    lastMsgClickTime = now;
+}
+function toggleMsgSelection(id) {
+    if(!msgSelectionMode) {
+        msgSelectionMode = true;
+        selectedMessages = [id];
+    } else {
+        if(selectedMessages.includes(id)) selectedMessages = selectedMessages.filter(x => x !== id);
+        else selectedMessages.push(id);
+    }
+    if(selectedMessages.length === 0) msgSelectionMode = false;
+    updateMsgSelUI();
+    loadMessages(); // fast local re-render, though it fetches API.
+}
+function updateMsgSelUI() {
+    const bar = document.getElementById('msgSelBar');
+    if(msgSelectionMode) {
+        bar.classList.add('active');
+        document.getElementById('msgSelTitle').textContent = `${selectedMessages.length} Selected`;
+    } else {
+        bar.classList.remove('active');
+    }
+}
+function exitMsgSelection() {
+    msgSelectionMode = false;
+    selectedMessages = [];
+    updateMsgSelUI();
+    loadMessages();
+}
+async function deleteSelectedMsgs() {
+    if(!confirm(`Delete ${selectedMessages.length} message(s)?`)) return;
+    try {
+        await fetch('/api/messages/bulk', { method: 'DELETE', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ids: selectedMessages}) });
+        showToast('✅ Messages deleted');
+    } catch(e) { showToast('❌ Failed to delete'); }
+    exitMsgSelection();
+    loadMessages();
+}
+async function copySelectedMsgs() {
+    // Find text for these IDs
+    let textToCopy = [];
+    const r=await fetch(`/api/messages/${activePhone}`);
+    const msgs=await r.json();
+    for(const id of selectedMessages) {
+        const m = msgs.find(x => x.id === id);
+        if(m) textToCopy.push(m.text);
+    }
+    if(textToCopy.length) {
+        navigator.clipboard.writeText(textToCopy.join('\n\n'));
+        showToast('✅ Copied to clipboard');
+    }
+    exitMsgSelection();
+}
+let targetForwardPhones = [];
+
+function forwardSelectedMsgs() {
+    if(selectedMessages.length === 0) return;
+    
+    // Populate modal list
+    const list = document.getElementById('forward-list');
+    list.innerHTML = '';
+    targetForwardPhones = [];
+    
+    allChats.forEach(chat => {
+        const contact = getContactObj(chat.phone) || {name: chat.phone};
+        const div = document.createElement('div');
+        div.style.padding = '12px';
+        div.style.borderBottom = '1px solid var(--border)';
+        div.style.display = 'flex';
+        div.style.alignItems = 'center';
+        div.style.gap = '12px';
+        div.style.cursor = 'pointer';
+        
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.style.width = '18px';
+        cb.style.height = '18px';
+        
+        div.onclick = (e) => {
+            if(e.target !== cb) cb.checked = !cb.checked;
+            if(cb.checked && !targetForwardPhones.includes(chat.phone)) targetForwardPhones.push(chat.phone);
+            if(!cb.checked && targetForwardPhones.includes(chat.phone)) targetForwardPhones = targetForwardPhones.filter(p => p !== chat.phone);
+            document.getElementById('btn-submit-forward').disabled = targetForwardPhones.length === 0;
+        };
+        
+        cb.onclick = (e) => {
+            e.stopPropagation();
+            if(cb.checked && !targetForwardPhones.includes(chat.phone)) targetForwardPhones.push(chat.phone);
+            if(!cb.checked && targetForwardPhones.includes(chat.phone)) targetForwardPhones = targetForwardPhones.filter(p => p !== chat.phone);
+            document.getElementById('btn-submit-forward').disabled = targetForwardPhones.length === 0;
+        };
+        
+        const avatar = document.createElement('div');
+        avatar.style.width = '40px';
+        avatar.style.height = '40px';
+        avatar.style.borderRadius = '50%';
+        avatar.style.background = 'var(--primary, var(--green))';
+        avatar.style.color = 'white';
+        avatar.style.display = 'flex';
+        avatar.style.alignItems = 'center';
+        avatar.style.justifyContent = 'center';
+        avatar.style.fontWeight = 'bold';
+        avatar.style.fontSize = '16px';
+        avatar.textContent = contact.name.charAt(0).toUpperCase();
+        
+        const info = document.createElement('div');
+        info.style.flex = '1';
+        info.innerHTML = `<div style="font-weight:600;color:var(--text-1);">${contact.name}</div>
+                          <div style="font-size:12px;color:var(--text-3);">${chat.phone}</div>`;
+        
+        div.appendChild(cb);
+        div.appendChild(avatar);
+        div.appendChild(info);
+        list.appendChild(div);
+    });
+    
+    document.getElementById('btn-submit-forward').disabled = true;
+    document.getElementById('modal-forward').style.display = 'flex';
+}
+
+async function submitForward() {
+    if(targetForwardPhones.length === 0 || selectedMessages.length === 0) return;
+    
+    const btn = document.getElementById('btn-submit-forward');
+    btn.textContent = 'Forwarding...';
+    btn.disabled = true;
+    
+    try {
+        const res = await fetch('/api/forward', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                message_ids: selectedMessages,
+                target_phones: targetForwardPhones
+            })
+        });
+        const data = await res.json();
+        if(data.error) throw new Error(data.error);
+        
+        showToast(`✅ Forwarded to ${targetForwardPhones.length} chat(s)`);
+        document.getElementById('modal-forward').style.display = 'none';
+        exitMsgSelection();
+        loadChats();
+    } catch(e) {
+        showToast('❌ Forward failed: ' + e.message);
+    } finally {
+        btn.textContent = 'Forward';
+        btn.disabled = false;
+    }
+}
+function quickForward(e, id) {
+    e.preventDefault();
+    e.stopPropagation();
+    selectedMessages = [id];
+    forwardSelectedMsgs();
+}
+
+</script>
+
+{% endblock %}

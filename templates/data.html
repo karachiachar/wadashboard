@@ -1,0 +1,1129 @@
+{% extends "base.html" %}
+{% set active_page = "data" %}
+
+{% block extra_head %}
+<style>
+/* ── DATA PAGE LAYOUT ── */
+.data-layout { display:flex; height:100%; width:100%; overflow:hidden; }
+
+/* ── LEFT SIDEBAR ── */
+.data-sidebar {
+    width:220px; min-width:220px;
+    background:var(--bg-sidebar);
+    border-right:1px solid var(--border);
+    display:flex; flex-direction:column;
+    padding:16px 0;
+}
+.data-sidebar-header { padding:8px 20px 16px; font-size:11px; font-weight:700; color:var(--text-3); text-transform:uppercase; letter-spacing:1px; }
+.data-tab { display:flex; align-items:center; gap:12px; padding:12px 20px; cursor:pointer; color:var(--text-2); font-size:13px; font-weight:500; transition:all 0.2s; border-left:3px solid transparent; }
+.data-tab:hover { background:var(--bg-item-hover); color:var(--text-1); }
+.data-tab.active { background:rgba(0,168,132,0.08); color:var(--green); border-left-color:var(--green); }
+.data-tab .dtab-icon { width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.data-tab .dtab-icon svg { width:17px; height:17px; }
+.data-tab.active .dtab-icon { background:rgba(0,168,132,0.15); }
+.data-tab:not(.active) .dtab-icon { background:var(--surface); }
+
+/* ── MAIN CONTENT ── */
+.data-content { flex:1; overflow:hidden; display:flex; flex-direction:column; background:var(--bg-darkest); }
+.data-panel { display:none; flex:1; flex-direction:column; overflow:hidden; }
+.data-panel.active { display:flex; }
+
+/* ── PANEL HEADER ── */
+.data-panel-header { background:var(--bg-header); border-bottom:1px solid var(--border); padding:16px 24px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+.data-panel-title { font-size:17px; font-weight:700; color:var(--text-1); }
+.data-panel-subtitle { font-size:12px; color:var(--text-2); margin-top:2px; }
+
+/* ── BUTTONS ── */
+.btn-primary { display:inline-flex; align-items:center; gap:7px; background:linear-gradient(135deg,var(--green),var(--green-deep)); color:white; border:none; padding:10px 18px; border-radius:10px; font-size:13px; font-weight:600; font-family:'Inter',sans-serif; cursor:pointer; transition:all 0.2s; box-shadow:0 4px 12px var(--green-glow); }
+.btn-primary:hover { transform:translateY(-1px); box-shadow:0 6px 18px rgba(0,168,132,0.4); }
+.btn-primary svg { width:14px; height:14px; }
+.btn-secondary { display:inline-flex; align-items:center; gap:7px; background:var(--surface); color:var(--text-2); border:1px solid var(--border); padding:9px 16px; border-radius:10px; font-size:13px; font-weight:500; font-family:'Inter',sans-serif; cursor:pointer; transition:all 0.2s; }
+.btn-secondary:hover { background:var(--bg-item-hover); color:var(--text-1); border-color:var(--text-3); }
+.btn-secondary svg { width:14px; height:14px; }
+.btn-danger { display:inline-flex; align-items:center; gap:7px; background:rgba(255,107,107,0.08); color:var(--danger); border:1px solid rgba(255,107,107,0.2); padding:9px 16px; border-radius:10px; font-size:13px; font-weight:500; font-family:'Inter',sans-serif; cursor:pointer; transition:all 0.2s; }
+.btn-danger:hover { background:rgba(255,107,107,0.18); border-color:var(--danger); }
+.btn-danger svg { width:14px; height:14px; }
+
+/* ── PANEL BODY ── */
+.data-panel-body { flex:1; overflow-y:auto; padding:24px; }
+.data-panel-body::-webkit-scrollbar { width:4px; }
+.data-panel-body::-webkit-scrollbar-thumb { background:rgba(255,255,255,.08); border-radius:4px; }
+
+/* ── PRODUCTS GRID ── */
+.products-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:16px; }
+.product-card { background:var(--bg-sidebar); border:1px solid var(--border); border-radius:14px; overflow:hidden; transition:all 0.2s; }
+.product-card:hover { border-color:rgba(0,168,132,0.3); transform:translateY(-2px); box-shadow:0 8px 24px rgba(0,0,0,0.3); }
+.product-card-img { width:100%; height:140px; object-fit:cover; background:var(--bg-input); display:flex; align-items:center; justify-content:center; color:var(--text-3); }
+.product-card-img img { width:100%; height:100%; object-fit:cover; }
+.product-card-img svg { width:40px; height:40px; }
+.product-card-body { padding:12px 14px; }
+.product-card-name { font-size:14px; font-weight:600; color:var(--text-1); margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.product-card-details { font-size:12px; color:var(--text-2); margin-bottom:10px; }
+.product-card-price { font-size:16px; font-weight:700; color:var(--green); }
+.product-card-actions { display:flex; gap:8px; margin-top:10px; }
+.product-card-actions button { flex:1; padding:7px; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text-2); font-size:12px; font-family:'Inter',sans-serif; cursor:pointer; transition:all 0.2s; }
+.product-card-actions .edit-btn:hover { border-color:var(--green); color:var(--green); }
+.product-card-actions .del-btn:hover { border-color:var(--danger); color:var(--danger); }
+
+/* ── ORDERS LIST ── */
+.orders-toolbar { display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
+.orders-count { font-size:13px; color:var(--text-2); margin-right:auto; }
+.order-card { background:var(--bg-sidebar); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:12px; transition:all 0.2s; }
+.order-card:hover { border-color:rgba(255,255,255,0.12); }
+.order-card.complete { opacity:0.6; }
+.order-card-top { display:flex; align-items:center; gap:12px; }
+.order-checkbox { width:18px; height:18px; border:2px solid var(--border); border-radius:4px; cursor:pointer; flex-shrink:0; accent-color:var(--green); }
+.order-id-badge { background:var(--bg-input); border:1px solid var(--border); border-radius:6px; padding:3px 8px; font-size:11px; font-weight:700; color:var(--text-2); flex-shrink:0; }
+.order-customer { flex:1; min-width:0; }
+.order-customer-name { font-size:14px; font-weight:600; color:var(--text-1); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.order-customer-phone { font-size:12px; color:var(--text-2); }
+.order-status-select { background:var(--bg-input); border:1px solid var(--border); border-radius:6px; color:var(--text-1); font-size:11px; font-weight:700; font-family:'Inter',sans-serif; padding:4px 6px; cursor:pointer; outline:none; flex-shrink:0; max-width:110px; }
+.order-status-select.status-new { border-color:#3b82f6; color:#3b82f6; }
+.order-status-select.status-packed { border-color:#f59e0b; color:#f59e0b; }
+.order-status-select.status-delivered { border-color:var(--green); color:var(--green); }
+.order-status-select.status-complete { border-color:var(--text-3); color:var(--text-3); }
+.order-total { font-size:14px; font-weight:800; color:var(--green); white-space:nowrap; flex-shrink:0; }
+.order-card-body { margin-top:12px; padding-top:12px; border-top:1px solid var(--border); display:flex; gap:16px; flex-wrap:wrap; }
+.order-items-list { flex:1; min-width:0; }
+.order-item-row { display:flex; justify-content:space-between; font-size:12px; color:var(--text-2); padding:3px 0; }
+.order-item-row span:last-child { color:var(--text-1); font-weight:500; }
+.order-card-footer { margin-top:10px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.order-address { font-size:12px; color:var(--text-3); display:flex; align-items:center; gap:4px; }
+.order-address a { color:var(--green); text-decoration:none; }
+.order-date { font-size:11px; color:var(--text-3); margin-left:auto; }
+.delete-order-btn { background:none; border:none; cursor:pointer; color:var(--text-3); padding:4px; border-radius:6px; transition:color 0.2s; }
+.delete-order-btn:hover { color:var(--danger); }
+.wa-send-btn { background:none; border:none; cursor:pointer; color:var(--text-3); padding:4px; border-radius:6px; transition:color 0.2s; }
+.wa-send-btn:hover { color:#25D366; }
+.wa-send-btn.sending { animation:spin 1s linear infinite; pointer-events:none; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* ── STATUS BADGES ── */
+.status-badge { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; }
+.status-badge.new { background:rgba(59,130,246,0.1); color:#3b82f6; border:1px solid rgba(59,130,246,0.2); }
+.status-badge.packed { background:rgba(245,158,11,0.1); color:#f59e0b; border:1px solid rgba(245,158,11,0.2); }
+.status-badge.delivered { background:rgba(0,168,132,0.1); color:var(--green); border:1px solid var(--green-glow); }
+.status-badge.complete { background:rgba(255,255,255,0.04); color:var(--text-3); border:1px solid var(--border); }
+
+/* ── SELECT ALL ── */
+.select-bar { display:flex; align-items:center; gap:12px; background:var(--bg-input); border:1px solid var(--border); border-radius:10px; padding:10px 14px; margin-bottom:16px; }
+.select-bar label { font-size:13px; color:var(--text-2); cursor:pointer; display:flex; align-items:center; gap:8px; }
+.selected-count { font-size:13px; color:var(--green); font-weight:600; }
+.packing-btn { display:none; }
+.packing-btn.visible { display:inline-flex; }
+
+/* ── PACKING VIEW PANEL ── */
+.packing-view { position:fixed; inset:0; background:var(--bg-darkest); z-index:500; display:none; flex-direction:column; animation:slideInPacking 0.3s ease; }
+@keyframes slideInPacking { from { transform:translateX(100%); } to { transform:translateX(0); } }
+.packing-view.active { display:flex; }
+.packing-header { background:var(--bg-header); border-bottom:1px solid var(--border); padding:16px 24px; display:flex; align-items:center; gap:16px; }
+.packing-back { background:none; border:none; color:var(--text-2); cursor:pointer; display:flex; align-items:center; gap:8px; font-size:14px; font-family:'Inter',sans-serif; transition:color 0.2s; }
+.packing-back:hover { color:var(--text-1); }
+.packing-back svg { width:18px; height:18px; }
+.packing-title { font-size:18px; font-weight:700; color:var(--text-1); flex:1; }
+.packing-body { flex:1; overflow-y:auto; padding:24px; }
+.packing-body::-webkit-scrollbar { width:4px; }
+.packing-body::-webkit-scrollbar-thumb { background:rgba(255,255,255,.08); border-radius:4px; }
+.packing-order-card { background:var(--bg-sidebar); border:1px solid var(--border); border-radius:16px; padding:20px; margin-bottom:20px; }
+.packing-order-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+.packing-order-id { font-size:11px; font-weight:700; color:var(--text-3); text-transform:uppercase; letter-spacing:0.5px; }
+.packing-customer { font-size:16px; font-weight:700; color:var(--text-1); }
+.packing-phone { font-size:13px; color:var(--text-2); margin-top:2px; }
+.packing-address { font-size:12px; color:var(--text-3); margin-top:6px; display:flex; align-items:center; gap:4px; }
+.packing-address a { color:var(--green); }
+.packing-items-table { width:100%; margin-top:16px; border-collapse:collapse; }
+.packing-items-table th { text-align:left; font-size:11px; font-weight:700; color:var(--text-3); text-transform:uppercase; letter-spacing:0.5px; padding:8px 0; border-bottom:1px solid var(--border); }
+.packing-items-table td { padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.04); font-size:14px; color:var(--text-2); }
+.packing-items-table td:last-child { text-align:right; color:var(--text-1); font-weight:600; }
+.packing-items-table td:first-child { color:var(--text-1); }
+.packing-total-row td { font-weight:700; color:var(--text-1); border-bottom:none; padding-top:14px; }
+.packing-delivery-row td { color:var(--text-2); border-bottom:1px solid var(--border); }
+.packing-grand-row td { font-size:16px; font-weight:800; color:var(--green); border-bottom:none; }
+.qty-badge { display:inline-flex; align-items:center; justify-content:center; background:rgba(0,168,132,0.15); color:var(--green); border-radius:6px; padding:2px 8px; font-size:12px; font-weight:700; margin-left:8px; }
+.print-btn { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:10px 18px; color:var(--text-2); font-size:13px; font-family:'Inter',sans-serif; cursor:pointer; display:flex; align-items:center; gap:7px; transition:all 0.2s; }
+.print-btn:hover { background:var(--bg-item-hover); color:var(--text-1); }
+
+/* ── MODAL ── */
+.modal-overlay { position:fixed; inset:0; z-index:300; background:rgba(0,0,0,.75); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; padding:20px; opacity:0; pointer-events:none; transition:opacity 0.2s; }
+.modal-overlay.active { opacity:1; pointer-events:all; }
+.modal { background:#182533; border:1px solid rgba(255,255,255,.1); border-radius:20px; padding:28px; width:100%; max-width:520px; box-shadow:0 24px 64px rgba(0,0,0,.7); transform:translateY(20px) scale(.97); transition:transform 0.25s cubic-bezier(.34,1.56,.64,1); max-height:92vh; overflow-y:auto; }
+.modal::-webkit-scrollbar { width:4px; }
+.modal::-webkit-scrollbar-thumb { background:rgba(255,255,255,.08); border-radius:4px; }
+.modal-overlay.active .modal { transform:translateY(0) scale(1); }
+.modal-header { display:flex; align-items:center; gap:12px; margin-bottom:22px; }
+.modal-icon { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.modal-icon svg { width:20px; height:20px; color:white; }
+.modal-icon.m-green { background:linear-gradient(135deg,var(--green),var(--green-deep)); }
+.modal-icon.m-purple { background:linear-gradient(135deg,#9c27b0,#673ab7); }
+.modal-icon.m-blue { background:linear-gradient(135deg,#1565c0,#0d47a1); }
+.modal-title { font-size:16px; font-weight:700; color:var(--text-1); }
+.modal-subtitle { font-size:12px; color:var(--text-2); margin-top:2px; }
+.modal-close { margin-left:auto; background:none; border:none; cursor:pointer; color:var(--text-2); padding:4px; border-radius:6px; transition:color 0.2s; }
+.modal-close:hover { color:var(--text-1); }
+.modal-close svg { width:18px; height:18px; }
+.form-group { margin-bottom:14px; }
+.form-label { display:block; font-size:11px; font-weight:700; color:var(--text-2); text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px; }
+.form-input,.form-textarea { width:100%; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); border-radius:10px; padding:11px 14px; color:var(--text-1); font-size:14px; font-family:'Inter',sans-serif; outline:none; transition:border-color 0.2s,box-shadow 0.2s; }
+.form-input::placeholder,.form-textarea::placeholder { color:var(--text-3); }
+.form-input:focus,.form-textarea:focus { border-color:var(--green); box-shadow:0 0 0 3px var(--green-glow); }
+.form-textarea { resize:none; min-height:72px; line-height:1.5; }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.btn-row { display:flex; gap:10px; margin-top:6px; }
+.btn-cancel { flex:1; padding:12px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1); border-radius:10px; color:var(--text-2); font-size:14px; font-weight:500; font-family:'Inter',sans-serif; cursor:pointer; transition:all 0.2s; }
+.btn-cancel:hover { background:rgba(255,255,255,.1); color:var(--text-1); }
+.btn-submit { flex:2; padding:12px; background:linear-gradient(135deg,var(--green),var(--green-deep)); border:none; border-radius:10px; color:white; font-size:14px; font-weight:700; font-family:'Inter',sans-serif; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; justify-content:center; gap:8px; }
+.btn-submit:hover { box-shadow:0 4px 20px rgba(0,168,132,.4); transform:translateY(-1px); }
+.btn-submit:disabled { opacity:.55; pointer-events:none; transform:none; }
+.btn-submit svg { width:15px; height:15px; }
+
+/* ── STEPS ── */
+.step-indicator { display:flex; align-items:center; margin-bottom:22px; gap:0; }
+.step { display:flex; align-items:center; flex:1; }
+.step-dot { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; flex-shrink:0; transition:all 0.2s; }
+.step-dot.done { background:var(--green); color:white; }
+.step-dot.active { background:rgba(0,168,132,0.2); color:var(--green); border:2px solid var(--green); }
+.step-dot.inactive { background:var(--bg-input); color:var(--text-3); border:2px solid var(--border); }
+.step-label { font-size:11px; font-weight:600; margin-left:6px; transition:color 0.2s; }
+.step-label.done,.step-label.active { color:var(--green); }
+.step-label.inactive { color:var(--text-3); }
+.step-line { flex:1; height:2px; background:var(--border); margin:0 8px; transition:background 0.3s; }
+.step-line.done { background:var(--green); }
+.step-content { display:none; }
+.step-content.active { display:block; }
+
+/* ── PRODUCT SELECTION ── */
+.product-select-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:12px; margin-bottom:16px; }
+.product-select-card { background:var(--bg-input); border:2px solid var(--border); border-radius:12px; padding:12px; cursor:pointer; transition:all 0.2s; text-align:center; }
+.product-select-card:hover { border-color:rgba(0,168,132,0.4); }
+.product-select-card.selected { border-color:var(--green); background:rgba(0,168,132,0.08); }
+.product-select-card .ps-img { width:64px; height:64px; border-radius:10px; object-fit:cover; background:var(--bg-sidebar); display:flex; align-items:center; justify-content:center; margin:0 auto 8px; overflow:hidden; }
+.product-select-card .ps-img img { width:100%; height:100%; object-fit:cover; }
+.product-select-card .ps-img svg { width:28px; height:28px; color:var(--text-3); }
+.ps-name { font-size:13px; font-weight:600; color:var(--text-1); margin-bottom:2px; line-height:1.2; }
+.ps-price { font-size:12px; color:var(--green); font-weight:700; }
+.qty-controls { display:flex; align-items:center; justify-content:center; gap:8px; margin-top:8px; }
+.qty-btn { width:24px; height:24px; border-radius:50%; background:var(--bg-sidebar); border:1px solid var(--border); color:var(--text-1); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:14px; transition:all 0.2s; }
+.qty-btn:hover { border-color:var(--green); color:var(--green); }
+.qty-val { font-size:14px; font-weight:700; color:var(--text-1); min-width:20px; text-align:center; }
+
+/* ── ORDER REVIEW ── */
+.review-section { background:var(--bg-input); border-radius:12px; padding:14px; margin-bottom:14px; }
+.review-section h4 { font-size:12px; font-weight:700; color:var(--text-3); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px; }
+.review-row { display:flex; justify-content:space-between; font-size:13px; padding:4px 0; }
+.review-row .r-label { color:var(--text-2); }
+.review-row .r-value { color:var(--text-1); font-weight:500; }
+.review-divider { height:1px; background:var(--border); margin:8px 0; }
+.review-total { display:flex; justify-content:space-between; font-size:16px; font-weight:800; color:var(--green); padding:8px 0 0; }
+.delivery-input-group { display:flex; align-items:center; gap:10px; }
+.delivery-input-group input { flex:1; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); border-radius:10px; padding:10px 14px; color:var(--text-1); font-size:14px; font-family:'Inter',sans-serif; outline:none; }
+.delivery-input-group input:focus { border-color:var(--green); }
+
+/* ── IMAGE UPLOAD ── */
+.img-upload-area { border:2px dashed rgba(255,255,255,.15); border-radius:12px; padding:20px; text-align:center; cursor:pointer; transition:all 0.2s; position:relative; overflow:hidden; }
+.img-upload-area:hover { border-color:var(--green); background:var(--green-glow); }
+.img-upload-area input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.img-upload-preview { width:80px; height:80px; border-radius:10px; object-fit:cover; margin:0 auto; display:block; }
+.img-upload-label { font-size:13px; color:var(--text-2); margin-top:8px; }
+
+/* ── EMPTY STATE ── */
+.empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center; height:300px; text-align:center; color:var(--text-3); }
+.empty-state svg { width:48px; height:48px; margin-bottom:12px; opacity:0.4; }
+.empty-state h3 { font-size:16px; font-weight:600; color:var(--text-2); margin-bottom:6px; }
+.empty-state p { font-size:13px; }
+
+/* ── TOAST ── */
+.toast { position:fixed; bottom:20px; right:20px; background:var(--green); color:white; padding:12px 20px; border-radius:10px; font-size:13px; font-weight:500; box-shadow:0 4px 16px rgba(0,168,132,0.4); transform:translateY(80px); opacity:0; transition:all 0.3s cubic-bezier(0.4,0,0.2,1); z-index:600; display:flex; align-items:center; gap:8px; }
+.toast.show { transform:translateY(0); opacity:1; }
+.toast.error { background:var(--danger); }
+.toast svg { width:16px; height:16px; }
+
+/* ── SUBTABS ── */
+.order-subtabs { display:flex; gap:20px; border-bottom:1px solid rgba(255,255,255,0.05); padding:0 24px; margin-bottom:10px; background:var(--bg-panel); }
+.order-subtab { padding:12px 4px; font-size:14px; font-weight:600; color:var(--text-3); cursor:pointer; border-bottom:2px solid transparent; transition:all 0.2s; position:relative; }
+.order-subtab:hover { color:var(--text-1); }
+.order-subtab.active { color:var(--green); border-bottom-color:var(--green); }
+.order-subtab .badge { background:var(--bg-input); color:var(--text-2); font-size:11px; padding:2px 6px; border-radius:10px; margin-left:6px; font-weight:700; }
+.order-subtab.active .badge { background:rgba(0,168,132,0.15); color:var(--green); }
+
+/* ── MOBILE ── */
+@media (max-width:767px) {
+    .data-sidebar { width:56px; min-width:56px; padding:12px 0; }
+    .data-sidebar-header { display:none; }
+    .data-tab { padding:12px; justify-content:center; border-left-width:0; border-bottom:3px solid transparent; }
+    .data-tab.active { border-bottom-color:var(--green); border-left-color:transparent; }
+    .data-tab .dtab-label { display:none; }
+    .form-row { grid-template-columns:1fr; }
+    .data-panel-body { padding:16px; }
+    .products-grid { grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="data-layout">
+
+    <!-- ══ LEFT SIDEBAR ══ -->
+    <div class="data-sidebar">
+        <div class="data-sidebar-header">Data</div>
+        <div class="data-tab active" onclick="switchDataTab('orders')" id="dtab-orders">
+            <div class="dtab-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+            </div>
+            <span class="dtab-label" style="font-size:13px;font-weight:500;">Orders</span>
+        </div>
+        <div class="data-tab" onclick="switchDataTab('products')" id="dtab-products">
+            <div class="dtab-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="15" rx="2"/><path d="M16 7V5a4 4 0 0 0-8 0v2"/></svg>
+            </div>
+            <span class="dtab-label" style="font-size:13px;font-weight:500;">Products</span>
+        </div>
+    </div>
+
+    <!-- ══ MAIN CONTENT ══ -->
+    <div class="data-content">
+
+        <!-- ── ORDERS PANEL ── -->
+        <div class="data-panel active" id="panel-orders">
+            <div class="data-panel-header" style="border-bottom:none; padding-bottom:10px;">
+                <div>
+                    <div class="data-panel-title">Orders</div>
+                    <div class="data-panel-subtitle" id="orders-subtitle">Loading orders…</div>
+                </div>
+                <div style="display:flex;gap:10px;align-items:center;">
+                    <button class="btn-primary" onclick="openOrderModal()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        New Order
+                    </button>
+                </div>
+            </div>
+
+            <!-- Subtabs -->
+            <div class="order-subtabs">
+                <div class="order-subtab active" onclick="switchOrderTab('new')" id="otab-new">New <span class="badge" id="obadge-new">0</span></div>
+                <div class="order-subtab" onclick="switchOrderTab('packed')" id="otab-packed">Packing <span class="badge" id="obadge-packed">0</span></div>
+                <div class="order-subtab" onclick="switchOrderTab('delivered')" id="otab-delivered">Delivery <span class="badge" id="obadge-delivered">0</span></div>
+                <div class="order-subtab" onclick="switchOrderTab('complete')" id="otab-complete">Complete</div>
+            </div>
+
+            <div class="data-panel-body">
+                <!-- Select All + Packing Bar -->
+                <div class="select-bar">
+                    <label>
+                        <input type="checkbox" id="selectAllOrders" onchange="toggleSelectAll(this)" style="accent-color:var(--green);width:16px;height:16px;">
+                        Select All
+                    </label>
+                    <span class="selected-count" id="selectedCount" style="display:none;">0 selected</span>
+                    
+                    <button class="btn-primary workflow-btn" id="wfBtnNew" onclick="processWorkflow('packed')" style="display:none;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="15" rx="2"/><path d="M16 7V5a4 4 0 0 0-8 0v2"/><line x1="12" y1="12" x2="12" y2="17"/><line x1="9" y1="14.5" x2="15" y2="14.5"/></svg>
+                        Send to Packing
+                    </button>
+                    <button class="btn-primary workflow-btn" id="wfBtnPacked" onclick="processWorkflow('delivered')" style="display:none;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                        Send to Delivery
+                    </button>
+                    <button class="btn-primary workflow-btn" id="wfBtnDelivered" onclick="processWorkflow('complete')" style="display:none;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        Complete
+                    </button>
+
+                    <button class="btn-secondary packing-btn" id="waMultiBtn" onclick="sendSelectedToWA()" style="background:rgba(37,211,102,0.08);border-color:rgba(37,211,102,0.3);color:#25D366;margin-left:auto;">
+                        <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" width="14" height="14"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                        Send to WhatsApp
+                    </button>
+                </div>
+                <!-- Orders list -->
+                <div id="ordersList"></div>
+
+                <!-- Packing Summary Container -->
+                <div id="packingSummaryContainer" style="display:none; margin-top:24px; padding:20px; background:var(--bg-input); border-radius:12px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                        <h3 style="color:var(--text-1); font-size:16px; font-weight:600; margin:0;">Items to Pack Summary</h3>
+                        <button class="print-btn" onclick="window.print()" style="font-size:12px; padding:6px 12px; height:auto;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" style="margin-right:4px;"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                            Print List
+                        </button>
+                    </div>
+                    <div id="packingSummaryBody"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── PRODUCTS PANEL ── -->
+        <div class="data-panel" id="panel-products">
+            <div class="data-panel-header">
+                <div>
+                    <div class="data-panel-title">Products</div>
+                    <div class="data-panel-subtitle" id="products-subtitle">Manage your product catalog</div>
+                </div>
+                <button class="btn-primary" onclick="openProductModal()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Add Product
+                </button>
+            </div>
+            <div class="data-panel-body">
+                <div class="products-grid" id="productsGrid"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══ PACKING VIEW ══ -->
+<div class="packing-view" id="packingView">
+    <div class="packing-header">
+        <button class="packing-back" onclick="closePackingView()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            Back to Orders
+        </button>
+        <span class="packing-title">📦 Packing Sheet</span>
+        <button class="print-btn" onclick="window.print()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            Print
+        </button>
+    </div>
+    <div class="packing-body" id="packingBody"></div>
+</div>
+
+<!-- ══ PRODUCT MODAL ══ -->
+<div class="modal-overlay" id="productModal">
+    <div class="modal">
+        <div class="modal-header">
+            <div class="modal-icon m-purple">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="15" rx="2"/><path d="M16 7V5a4 4 0 0 0-8 0v2"/></svg>
+            </div>
+            <div>
+                <div class="modal-title" id="productModalTitle">Add Product</div>
+                <div class="modal-subtitle">Register a new product to your catalog</div>
+            </div>
+            <button class="modal-close" onclick="closeProductModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        </div>
+
+        <input type="hidden" id="editProductId">
+
+        <div class="form-group">
+            <label class="form-label">Product Image</label>
+            <div class="img-upload-area" id="imgUploadArea">
+                <input type="file" id="productImageInput" accept="image/*" onchange="previewProductImage(this)">
+                <div id="imgPlaceholder">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:40px;height:40px;color:var(--text-3);margin:0 auto;display:block;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                    <div class="img-upload-label">Click to upload product image</div>
+                </div>
+                <img id="imgPreview" class="img-upload-preview" style="display:none;" alt="Product">
+                <input type="hidden" id="productImageUrl">
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Product Name *</label>
+            <input type="text" class="form-input" id="productName" placeholder="e.g. Premium T-Shirt">
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">Weight / Size</label>
+                <input type="text" class="form-input" id="productWeight" placeholder="e.g. 500g, Medium">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Price (Rs)</label>
+                <input type="number" class="form-input" id="productPrice" placeholder="0.00" min="0" step="0.01">
+            </div>
+        </div>
+        <div class="btn-row">
+            <button class="btn-cancel" onclick="closeProductModal()">Cancel</button>
+            <button class="btn-submit" onclick="saveProduct()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                Save Product
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ══ ORDER BOOKING MODAL ══ -->
+<div class="modal-overlay" id="orderModal">
+    <div class="modal" style="max-width:580px;">
+        <div class="modal-header">
+            <div class="modal-icon m-green">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+            </div>
+            <div>
+                <div class="modal-title">New Order</div>
+                <div class="modal-subtitle">Create a customer order</div>
+            </div>
+            <button class="modal-close" onclick="closeOrderModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        </div>
+
+        <!-- Step Indicator -->
+        <div class="step-indicator">
+            <div class="step">
+                <div class="step-dot active" id="sdot-1">1</div>
+                <span class="step-label active" id="slabel-1">Details</span>
+            </div>
+            <div class="step-line" id="sline-1"></div>
+            <div class="step">
+                <div class="step-dot inactive" id="sdot-2">2</div>
+                <span class="step-label inactive" id="slabel-2">Products</span>
+            </div>
+            <div class="step-line" id="sline-2"></div>
+            <div class="step">
+                <div class="step-dot inactive" id="sdot-3">3</div>
+                <span class="step-label inactive" id="slabel-3">Review</span>
+            </div>
+        </div>
+
+        <!-- Step 1: Customer Details -->
+        <div class="step-content active" id="step-1">
+            <div class="form-group">
+                <label class="form-label">Customer Name *</label>
+                <input type="text" class="form-input" id="orderName" placeholder="Full Name">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Phone Number *</label>
+                <input type="text" class="form-input" id="orderPhone" placeholder="+92…">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Delivery Address</label>
+                <textarea class="form-textarea" id="orderAddress" placeholder="Street, City, Area…" rows="2"></textarea>
+            </div>
+            <div style="display:flex; gap:15px; margin-bottom:15px;">
+                <div class="form-group" style="flex:1; margin-bottom:0;">
+                    <label class="form-label">Location Link (Google Maps)</label>
+                    <input type="text" class="form-input" id="orderLocation" placeholder="https://maps.google.com/…">
+                </div>
+                <div class="form-group" style="flex:1; margin-bottom:0;">
+                    <label class="form-label">Delivery Date</label>
+                    <input type="text" class="form-input" id="orderDeliveryDate" placeholder="e.g. Tomorrow or 25-Oct-2026">
+                </div>
+            </div>
+            <div class="btn-row">
+                <button class="btn-cancel" onclick="closeOrderModal()">Cancel</button>
+                <button class="btn-submit" onclick="goOrderStep(2)">
+                    Next: Select Products
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 2: Product Selection -->
+        <div class="step-content" id="step-2">
+            <div class="product-select-grid" id="orderProductGrid"></div>
+            <div style="font-size:13px;color:var(--text-2);margin-bottom:12px;" id="noProductsMsg" style="display:none;">No products yet. <a href="#" onclick="switchDataTab('products');closeOrderModal();" style="color:var(--green);">Add products first →</a></div>
+            <div class="btn-row">
+                <button class="btn-cancel" onclick="goOrderStep(1)">← Back</button>
+                <button class="btn-submit" onclick="goOrderStep(3)">
+                    Next: Review Order
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 3: Review -->
+        <div class="step-content" id="step-3">
+            <div class="review-section">
+                <h4>Customer Details</h4>
+                <div class="review-row"><span class="r-label">Name</span><span class="r-value" id="rv-name">—</span></div>
+                <div class="review-row"><span class="r-label">Phone</span><span class="r-value" id="rv-phone">—</span></div>
+                <div class="review-row"><span class="r-label">Address</span><span class="r-value" id="rv-address">—</span></div>
+            </div>
+            <div class="review-section">
+                <h4>Order Items</h4>
+                <div id="rv-items"></div>
+                <div class="review-divider"></div>
+                <div class="review-row"><span class="r-label">Subtotal</span><span class="r-value" id="rv-subtotal">Rs 0</span></div>
+                <div class="review-row" style="align-items:center;">
+                    <span class="r-label">Delivery Charges</span>
+                    <div class="delivery-input-group" style="width:140px;">
+                        <input type="number" id="orderDelivery" placeholder="0" min="0" step="1" value="0" oninput="updateOrderTotal()" style="text-align:right;padding:6px 10px;font-size:13px;">
+                    </div>
+                </div>
+                <div class="review-divider"></div>
+                <div class="review-total"><span>Total</span><span id="rv-total">Rs 0</span></div>
+            </div>
+            <div class="btn-row">
+                <button class="btn-cancel" onclick="goOrderStep(2)">← Back</button>
+                <button class="btn-submit" id="createOrderBtn" onclick="createOrder()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    Create Order
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    <span id="toastMsg">Done</span>
+</div>
+
+<script>
+// ════════════════════════════════════
+//  GLOBALS
+// ════════════════════════════════════
+let allProducts = [];
+let allOrders = [];
+let orderSelections = {}; // productId -> qty
+let currentOrderStep = 1;
+let currentOrderFilter = 'new';
+
+function switchOrderTab(tab) {
+    currentOrderFilter = tab;
+    document.querySelectorAll('.order-subtab').forEach(t => t.classList.remove('active'));
+    document.getElementById('otab-' + tab).classList.add('active');
+    
+    // Toggle buttons
+    document.getElementById('wfBtnNew').style.display = tab === 'new' ? 'inline-flex' : 'none';
+    document.getElementById('wfBtnPacked').style.display = tab === 'packed' ? 'inline-flex' : 'none';
+    document.getElementById('wfBtnDelivered').style.display = tab === 'delivered' ? 'inline-flex' : 'none';
+    
+    // Toggle packing summary container
+    document.getElementById('packingSummaryContainer').style.display = tab === 'packed' ? 'block' : 'none';
+    
+    // Reset selection state
+    document.getElementById('selectAllOrders').checked = false;
+    toggleSelectAll(document.getElementById('selectAllOrders'));
+    
+    renderOrders();
+}
+
+// ── Tab Switching ──
+function switchDataTab(tab) {
+    document.querySelectorAll('.data-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.data-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('dtab-' + tab).classList.add('active');
+    document.getElementById('panel-' + tab).classList.add('active');
+    if (tab === 'products') loadProducts();
+    if (tab === 'orders') loadOrders();
+}
+
+// ── Toast ──
+function showToast(msg, isError) {
+    const t = document.getElementById('toast');
+    document.getElementById('toastMsg').textContent = msg;
+    t.classList.toggle('error', !!isError);
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ════════════════════════════════════
+//  PRODUCTS
+// ════════════════════════════════════
+async function loadProducts() {
+    try {
+        const r = await fetch('/api/products');
+        allProducts = await r.json();
+        renderProducts();
+    } catch(e) { showToast('Failed to load products', true); }
+}
+
+function renderProducts() {
+    const grid = document.getElementById('productsGrid');
+    document.getElementById('products-subtitle').textContent = allProducts.length + ' product' + (allProducts.length !== 1 ? 's' : '') + ' registered';
+    if (!allProducts.length) {
+        grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="7" width="20" height="15" rx="2"/><path d="M16 7V5a4 4 0 0 0-8 0v2"/></svg><h3>No products yet</h3><p>Click "Add Product" to register your first product.</p></div>';
+        return;
+    }
+    grid.innerHTML = allProducts.map(p => `
+        <div class="product-card">
+            <div class="product-card-img">
+                ${p.image_path ? `<img src="${p.image_path}" alt="${p.name}" loading="lazy">` : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>'}
+            </div>
+            <div class="product-card-body">
+                <div class="product-card-name">${escHtml(p.name)}</div>
+                <div class="product-card-details">${p.weight ? '⚖️ ' + escHtml(p.weight) : ''}</div>
+                <div class="product-card-price">Rs ${Number(p.price).toLocaleString()}</div>
+                <div class="product-card-actions">
+                    <button class="edit-btn" onclick="editProduct(${p.id})">✏️ Edit</button>
+                    <button class="del-btn" onclick="deleteProduct(${p.id})">🗑️ Delete</button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function openProductModal(pid) {
+    document.getElementById('productModal').classList.add('active');
+    document.getElementById('editProductId').value = '';
+    document.getElementById('productName').value = '';
+    document.getElementById('productWeight').value = '';
+    document.getElementById('productPrice').value = '';
+    document.getElementById('productImageUrl').value = '';
+    document.getElementById('imgPreview').style.display = 'none';
+    document.getElementById('imgPlaceholder').style.display = 'block';
+    document.getElementById('productModalTitle').textContent = 'Add Product';
+}
+
+function closeProductModal() {
+    document.getElementById('productModal').classList.remove('active');
+}
+
+function editProduct(pid) {
+    const p = allProducts.find(x => x.id === pid);
+    if (!p) return;
+    openProductModal();
+    document.getElementById('editProductId').value = pid;
+    document.getElementById('productName').value = p.name;
+    document.getElementById('productWeight').value = p.weight || '';
+    document.getElementById('productPrice').value = p.price || '';
+    document.getElementById('productImageUrl').value = p.image_path || '';
+    document.getElementById('productModalTitle').textContent = 'Edit Product';
+    if (p.image_path) {
+        document.getElementById('imgPreview').src = p.image_path;
+        document.getElementById('imgPreview').style.display = 'block';
+        document.getElementById('imgPlaceholder').style.display = 'none';
+    }
+}
+
+async function previewProductImage(input) {
+    const file = input.files[0];
+    if (!file) return;
+    // Preview
+    const reader = new FileReader();
+    reader.onload = e => {
+        document.getElementById('imgPreview').src = e.target.result;
+        document.getElementById('imgPreview').style.display = 'block';
+        document.getElementById('imgPlaceholder').style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+    // Upload
+    const fd = new FormData();
+    fd.append('file', file);
+    try {
+        const r = await fetch('/api/products/upload_image', { method:'POST', body:fd });
+        const data = await r.json();
+        if (data.url) document.getElementById('productImageUrl').value = data.url;
+    } catch(e) { showToast('Image upload failed', true); }
+}
+
+async function saveProduct() {
+    const pid = document.getElementById('editProductId').value;
+    const name = document.getElementById('productName').value.trim();
+    if (!name) { showToast('Product name required', true); return; }
+    const payload = {
+        name,
+        weight: document.getElementById('productWeight').value.trim(),
+        price: parseFloat(document.getElementById('productPrice').value) || 0,
+        image_path: document.getElementById('productImageUrl').value
+    };
+    try {
+        if (pid) {
+            await fetch('/api/products/' + pid, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+        } else {
+            await fetch('/api/products', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+        }
+        closeProductModal();
+        await loadProducts();
+        showToast(pid ? 'Product updated!' : 'Product added!');
+    } catch(e) { showToast('Error saving product', true); }
+}
+
+async function deleteProduct(pid) {
+    if (!confirm('Delete this product?')) return;
+    try {
+        await fetch('/api/products/' + pid, { method:'DELETE' });
+        await loadProducts();
+        showToast('Product deleted');
+    } catch(e) { showToast('Error deleting product', true); }
+}
+
+// ════════════════════════════════════
+//  ORDERS
+// ════════════════════════════════════
+async function loadOrders() {
+    try {
+        const r = await fetch('/api/orders');
+        allOrders = await r.json();
+        renderOrders();
+    } catch(e) { showToast('Failed to load orders', true); }
+}
+
+function renderOrders() {
+    const list = document.getElementById('ordersList');
+    
+    const counts = { new: 0, packed: 0, delivered: 0, complete: 0 };
+    allOrders.forEach(o => { if (counts[o.status] !== undefined) counts[o.status]++; });
+    document.getElementById('obadge-new').textContent = counts.new;
+    document.getElementById('obadge-packed').textContent = counts.packed;
+    document.getElementById('obadge-delivered').textContent = counts.delivered;
+    document.getElementById('orders-subtitle').textContent = `Total: ${allOrders.length} | Showing ${currentOrderFilter}`;
+
+    const filteredOrders = allOrders.filter(o => o.status === currentOrderFilter).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+    if (!filteredOrders.length) {
+        list.innerHTML = '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg><h3>No ' + currentOrderFilter + ' orders</h3><p>Nothing to show here.</p></div>';
+        if (currentOrderFilter === 'packed') updatePackingSummary();
+        return;
+    }
+
+    list.innerHTML = filteredOrders.map(o => {
+        const dateStr = o.created_at ? new Date(o.created_at).toLocaleDateString('en-PK', {day:'numeric',month:'short',year:'numeric'}) : '';
+        const statusText = {new:'New', packed:'Pkg', delivered:'Dlv', complete:'Cmp'}[o.status] || o.status;
+        return `
+        <div class="order-card ${o.status === 'complete' ? 'complete' : ''}" id="order-card-${o.id}">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <input type="checkbox" class="order-checkbox" id="oc-${o.id}" onchange="updateSelectedCount()">
+                    <span class="order-id-badge">#${o.id}</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <div style="background:var(--bg-panel); color:var(--text-1); font-size:12px; font-weight:700; padding:4px 10px; border-radius:12px; border:1px solid var(--border);">${statusText}</div>
+                    <button class="wa-send-btn" onclick="sendOrderToWA(${o.id})" title="Send to WhatsApp" id="wa-btn-${o.id}">
+                        <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" width="14" height="14"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                    </button>
+                    <button class="delete-order-btn" onclick="deleteOrder(${o.id})" title="Delete Order" style="padding:6px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <div style="margin-bottom:15px; font-size:13px; color:var(--text-2);">
+                <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                    <strong style="color:var(--text-1); font-size:14px;">${escHtml(o.customer_name || '—')}</strong>
+                    <span>${dateStr}</span>
+                </div>
+                <div>📞 ${escHtml(o.phone || '—')}</div>
+                ${o.address ? `<div style="margin-top:2px;">🏠 ${escHtml(o.address)}</div>` : ''}
+                ${o.location_link ? `<div style="margin-top:2px;">📍 <a href="${escHtml(o.location_link)}" target="_blank" style="color:var(--primary);text-decoration:none;">Location Link</a></div>` : ''}
+                ${o.delivery_date ? `<div style="margin-top:4px; display:inline-block; background:rgba(0,168,132,0.1); color:var(--green); padding:2px 8px; border-radius:12px; font-weight:600; font-size:12px;">📅 Delivery: ${escHtml(o.delivery_date)}</div>` : ''}
+            </div>
+
+            <div style="background:var(--bg-input); border-radius:8px; padding:10px; margin-bottom:15px;">
+                <div style="display:flex; border-bottom:1px solid var(--border); padding-bottom:6px; margin-bottom:6px; font-size:11px; text-transform:uppercase; font-weight:600; color:var(--text-3); letter-spacing:0.5px;">
+                    <div style="flex:2;">Item</div>
+                    <div style="width:40px; text-align:center;">Qty</div>
+                    <div style="width:60px; text-align:right;">Price</div>
+                    <div style="width:70px; text-align:right;">Total</div>
+                </div>
+                ${o.items.map(i => `
+                    <div style="display:flex; margin-bottom:6px; font-size:13px; align-items:center;">
+                        <div style="flex:2; color:var(--text-1); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${escHtml(i.product_name)}">${escHtml(i.product_name)}</div>
+                        <div style="width:40px; text-align:center; color:var(--text-2);">${i.quantity}</div>
+                        <div style="width:60px; text-align:right; color:var(--text-2);">Rs ${Number(i.product_price).toLocaleString()}</div>
+                        <div style="width:70px; text-align:right; font-weight:500; color:var(--text-1);">Rs ${(i.product_price * i.quantity).toLocaleString()}</div>
+                    </div>
+                `).join('')}
+            </div>
+
+            <div style="border-top:1px dashed var(--border); padding-top:12px; font-size:13px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:6px; color:var(--text-2);">
+                    <span>Subtotal</span>
+                    <span>Rs ${Number(o.subtotal).toLocaleString()}</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:6px; color:var(--text-2);">
+                    <span>Delivery Charge</span>
+                    <span>Rs ${Number(o.delivery_charge || 0).toLocaleString()}</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-top:8px; padding-top:8px; border-top:1px solid var(--border); font-weight:700; font-size:16px; color:var(--text-1);">
+                    <span>Total Bill</span>
+                    <span style="color:var(--primary);">Rs ${Number(o.total).toLocaleString()}</span>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function updateSelectedCount() {
+    const checked = document.querySelectorAll('.order-checkbox:checked');
+    const count = checked.length;
+    document.getElementById('selectedCount').textContent = count + ' selected';
+    document.getElementById('selectedCount').style.display = count ? 'inline' : 'none';
+    
+    // Enable/disable workflow buttons based on selection
+    const disabled = count === 0;
+    document.getElementById('wfBtnNew').disabled = disabled;
+    document.getElementById('wfBtnPacked').disabled = disabled;
+    document.getElementById('wfBtnDelivered').disabled = disabled;
+    document.getElementById('waMultiBtn').disabled = disabled;
+    
+    if (currentOrderFilter === 'packed') {
+        updatePackingSummary();
+    }
+}
+
+function toggleSelectAll(cb) {
+    document.querySelectorAll('.order-checkbox').forEach(c => c.checked = cb.checked);
+    updateSelectedCount();
+}
+
+async function updateOrderStatus(oid, status, selectEl) {
+    try {
+        await fetch('/api/orders/' + oid, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({status}) });
+        selectEl.className = 'order-status-select status-' + status;
+        const card = document.getElementById('order-card-' + oid);
+        if (card) card.classList.toggle('complete', status === 'complete');
+        await loadOrders(); // Reload to re-sort
+        showToast('Order status updated!');
+    } catch(e) { showToast('Error updating status', true); }
+}
+
+async function deleteOrder(oid) {
+    if (!confirm('Delete order #' + oid + '?')) return;
+    try {
+        await fetch('/api/orders/' + oid, { method:'DELETE' });
+        await loadOrders();
+        showToast('Order deleted');
+    } catch(e) { showToast('Error deleting order', true); }
+}
+
+// ── WORKFLOW & PACKING SUMMARY ──
+async function processWorkflow(targetStatus) {
+    const checked = document.querySelectorAll('.order-checkbox:checked');
+    const ids = Array.from(checked).map(c => c.id.replace('oc-',''));
+    if (!ids.length) return;
+    
+    try {
+        // Send PUT requests for all selected orders
+        await Promise.all(ids.map(id => fetch('/api/orders/' + id, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: targetStatus })
+        })));
+        
+        // Reload to get fresh data
+        await loadOrders();
+        
+        // Reset selection
+        document.getElementById('selectAllOrders').checked = false;
+        toggleSelectAll(document.getElementById('selectAllOrders'));
+        
+        showToast(`Moved ${ids.length} orders to ${targetStatus}`);
+    } catch (e) {
+        showToast('Error updating orders', true);
+    }
+}
+
+function updatePackingSummary() {
+    const body = document.getElementById('packingSummaryBody');
+    const checked = document.querySelectorAll('.order-checkbox:checked');
+    const ids = Array.from(checked).map(c => parseInt(c.id.replace('oc-','')));
+    
+    // Filter to packed orders
+    let targetOrders = allOrders.filter(o => o.status === 'packed');
+    
+    // If checkboxes are selected, narrow it down to ONLY the selected packed orders
+    if (ids.length > 0) {
+        targetOrders = targetOrders.filter(o => ids.includes(o.id));
+    }
+    
+    if (targetOrders.length === 0) {
+        body.innerHTML = '<div style="color:var(--text-3); font-size:13px; font-style:italic;">No packed orders to summarize.</div>';
+        return;
+    }
+    
+    let productTotals = {};
+    targetOrders.forEach(o => {
+        o.items.forEach(i => {
+            productTotals[i.product_name] = (productTotals[i.product_name] || 0) + i.quantity;
+        });
+    });
+
+    body.innerHTML = Object.entries(productTotals).map(([name, qty]) => `
+        <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.05); align-items:center;">
+            <span style="font-size:14px; color:var(--text-1); font-weight:500;">${escHtml(name)}</span>
+            <span style="font-size:15px; font-weight:800; color:var(--green); background:rgba(0,168,132,0.1); padding:2px 10px; border-radius:12px;">${qty}</span>
+        </div>
+    `).join('');
+}
+
+// ════════════════════════════════════
+//  ORDER BOOKING MODAL
+// ════════════════════════════════════
+function openOrderModal(prefill) {
+    document.getElementById('orderModal').classList.add('active');
+    currentOrderStep = 1;
+    orderSelections = {};
+    // Clear fields
+    document.getElementById('orderName').value = (prefill && prefill.name) || '';
+    document.getElementById('orderPhone').value = (prefill && prefill.phone) || '';
+    document.getElementById('orderAddress').value = (prefill && prefill.address) || '';
+    document.getElementById('orderLocation').value = (prefill && prefill.location) || '';
+    document.getElementById('orderDeliveryDate').value = '';
+    document.getElementById('orderDelivery').value = '0';
+    goOrderStep(1);
+}
+
+function closeOrderModal() {
+    document.getElementById('orderModal').classList.remove('active');
+}
+
+function goOrderStep(step) {
+    if (step === 2) {
+        if (!document.getElementById('orderName').value.trim() || !document.getElementById('orderPhone').value.trim()) {
+            showToast('Name and phone are required', true); return;
+        }
+        loadOrderProducts();
+    }
+    if (step === 3) {
+        const selected = Object.entries(orderSelections).filter(([,q]) => q > 0);
+        if (!selected.length) { showToast('Please select at least one product', true); return; }
+        buildOrderReview();
+    }
+    currentOrderStep = step;
+    document.querySelectorAll('.step-content').forEach(s => s.classList.remove('active'));
+    document.getElementById('step-' + step).classList.add('active');
+    // Update step dots
+    [1,2,3].forEach(i => {
+        const dot = document.getElementById('sdot-' + i);
+        const lbl = document.getElementById('slabel-' + i);
+        if (i < step) { dot.className='step-dot done'; dot.innerHTML='✓'; lbl.className='step-label done'; }
+        else if (i === step) { dot.className='step-dot active'; dot.textContent=i; lbl.className='step-label active'; }
+        else { dot.className='step-dot inactive'; dot.textContent=i; lbl.className='step-label inactive'; }
+        if (i < 3) {
+            document.getElementById('sline-' + i).className = i < step ? 'step-line done' : 'step-line';
+        }
+    });
+}
+
+function loadOrderProducts() {
+    const grid = document.getElementById('orderProductGrid');
+    if (!allProducts.length) {
+        grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--text-3);padding:20px;">No products registered yet. <a href="#" onclick="closeOrderModal();switchDataTab(\'products\')" style="color:var(--green);">Add products first →</a></div>';
+        return;
+    }
+    grid.innerHTML = allProducts.map(p => {
+        const qty = orderSelections[p.id] || 0;
+        return `
+        <div class="product-select-card ${qty > 0 ? 'selected' : ''}" id="psc-${p.id}">
+            <div class="ps-img">
+                ${p.image_path ? `<img src="${p.image_path}" alt="${escHtml(p.name)}">` : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>'}
+            </div>
+            <div class="ps-name">${escHtml(p.name)}</div>
+            <div class="ps-price">Rs ${Number(p.price).toLocaleString()}</div>
+            <div class="qty-controls">
+                <button class="qty-btn" onclick="changeQty(${p.id}, -1)">−</button>
+                <span class="qty-val" id="qty-${p.id}">${qty}</span>
+                <button class="qty-btn" onclick="changeQty(${p.id}, 1)">+</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function changeQty(pid, delta) {
+    const cur = orderSelections[pid] || 0;
+    const newQ = Math.max(0, cur + delta);
+    orderSelections[pid] = newQ;
+    const el = document.getElementById('qty-' + pid);
+    if (el) el.textContent = newQ;
+    const card = document.getElementById('psc-' + pid);
+    if (card) card.classList.toggle('selected', newQ > 0);
+}
+
+function buildOrderReview() {
+    document.getElementById('rv-name').textContent = document.getElementById('orderName').value;
+    document.getElementById('rv-phone').textContent = document.getElementById('orderPhone').value;
+    document.getElementById('rv-address').textContent = document.getElementById('orderAddress').value || '—';
+    const items = Object.entries(orderSelections).filter(([,q]) => q > 0).map(([pid, qty]) => {
+        const p = allProducts.find(x => x.id == pid);
+        return { product_id: parseInt(pid), product_name: p.name, product_price: p.price, quantity: qty };
+    });
+    const subtotal = items.reduce((s, i) => s + i.product_price * i.quantity, 0);
+    const delivery = parseFloat(document.getElementById('orderDelivery').value) || 0;
+    document.getElementById('rv-subtotal').textContent = 'Rs ' + subtotal.toLocaleString();
+    document.getElementById('rv-total').textContent = 'Rs ' + (subtotal + delivery).toLocaleString();
+    document.getElementById('rv-items').innerHTML = items.map(i => `
+        <div class="review-row">
+            <span class="r-label">${escHtml(i.product_name)} ×${i.quantity}</span>
+            <span class="r-value">Rs ${(i.product_price * i.quantity).toLocaleString()}</span>
+        </div>
+    `).join('');
+}
+
+function updateOrderTotal() {
+    const items = Object.entries(orderSelections).filter(([,q]) => q > 0).map(([pid, qty]) => {
+        const p = allProducts.find(x => x.id == pid);
+        return p ? p.price * qty : 0;
+    });
+    const subtotal = items.reduce((a,b) => a+b, 0);
+    const delivery = parseFloat(document.getElementById('orderDelivery').value) || 0;
+    document.getElementById('rv-subtotal').textContent = 'Rs ' + subtotal.toLocaleString();
+    document.getElementById('rv-total').textContent = 'Rs ' + (subtotal + delivery).toLocaleString();
+}
+
+async function createOrder() {
+    const btn = document.getElementById('createOrderBtn');
+    btn.disabled = true;
+    const items = Object.entries(orderSelections).filter(([,q]) => q > 0).map(([pid, qty]) => {
+        const p = allProducts.find(x => x.id == pid);
+        return { product_id: parseInt(pid), product_name: p.name, product_price: p.price, quantity: qty };
+    });
+    const payload = {
+        customer_name: document.getElementById('orderName').value.trim(),
+        phone: document.getElementById('orderPhone').value.trim(),
+        address: document.getElementById('orderAddress').value.trim(),
+        location_link: document.getElementById('orderLocation').value.trim(),
+        delivery_date: document.getElementById('orderDeliveryDate').value.trim(),
+        delivery_charge: parseFloat(document.getElementById('orderDelivery').value) || 0,
+        items
+    };
+    try {
+        const r = await fetch('/api/orders', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+        const data = await r.json();
+        if (data.error) throw new Error(data.error);
+        closeOrderModal();
+        await loadOrders();
+        showToast('Order #' + data.id + ' created!');
+    } catch(e) {
+        showToast('Error: ' + e.message, true);
+    } finally { btn.disabled = false; }
+}
+
+// ── Utility ──
+function escHtml(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ════════════════════════════════════
+//  SEND ORDER(S) TO WHATSAPP
+// ════════════════════════════════════
+function formatOrderAsText(o) {
+    let text = `📦 *ORDER #${o.id}*\n`;
+    text += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+    text += `👤 *Customer Details*\n`;
+    text += `Name: ${o.customer_name || '—'}\n`;
+    text += `Phone: ${o.phone || '—'}\n`;
+    if (o.address) text += `Address: ${o.address}\n`;
+    if (o.location_link) text += `Map: ${o.location_link}\n`;
+    if (o.delivery_date) text += `Delivery Date: ${o.delivery_date}\n`;
+    text += `──────────────────────\n`;
+    text += `🛒 *Order Items*\n`;
+    o.items.forEach(i => {
+        text += `▪ ${i.product_name}\n`;
+        text += `  Qty: ${i.quantity}  |  Price: Rs ${Number(i.product_price).toLocaleString()}  |  Total: Rs ${(i.quantity * i.product_price).toLocaleString()}\n`;
+    });
+    text += `──────────────────────\n`;
+    const subtotal = o.items.reduce((s,i) => s + i.product_price * i.quantity, 0);
+    text += `Subtotal: Rs ${subtotal.toLocaleString()}\n`;
+    if (o.delivery_charge) text += `Delivery Charge: Rs ${Number(o.delivery_charge).toLocaleString()}\n`;
+    text += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+    text += `💳 *TOTAL BILL: Rs ${Number(o.total).toLocaleString()}*\n`;
+    const statusEmoji = {new:'🆕',packed:'📦',delivered:'🚚',complete:'✅'}[o.status] || '•';
+    text += `${statusEmoji} Status: ${o.status.toUpperCase()}`;
+    return text;
+}
+
+async function sendOrderToWA(oid) {
+    const o = allOrders.find(x => x.id === oid);
+    if (!o) return;
+    const message = formatOrderAsText(o);
+    window.location.href = '/messenger?tab=contacts&prefill=' + encodeURIComponent(message);
+}
+
+async function sendSelectedToWA() {
+    const checked = document.querySelectorAll('.order-checkbox:checked');
+    const ids = Array.from(checked).map(c => parseInt(c.id.replace('oc-','')));
+    if (!ids.length) { showToast('No orders selected', true); return; }
+    
+    const texts = ids.map(oid => {
+        const o = allOrders.find(x => x.id === oid);
+        return o ? formatOrderAsText(o) : '';
+    }).filter(x => x);
+    
+    const combinedMessage = texts.join('\n\n\n');
+    window.location.href = '/messenger?tab=contacts&prefill=' + encodeURIComponent(combinedMessage);
+}
+
+// ── INIT ──
+window.onload = async () => {
+    await loadProducts();
+    await loadOrders();
+};
+</script>
+{% endblock %}
